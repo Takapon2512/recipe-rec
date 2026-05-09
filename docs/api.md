@@ -188,12 +188,21 @@ Access-Control-Max-Age: 86400
 ```json
 {
   "data": [
-    { "id": 1, "name": "野菜", "type": "food" },
-    { "id": 2, "name": "肉",   "type": "food" },
-    { "id": 8, "name": "醤油・味噌", "type": "seasoning" }
+    { "id": 1, "name": "野菜",       "type": "food",      "default_storage_location": "fridge" },
+    { "id": 2, "name": "肉",         "type": "food",      "default_storage_location": "fridge" },
+    { "id": 5, "name": "冷凍食品",   "type": "food",      "default_storage_location": "freezer" },
+    { "id": 8, "name": "醤油・味噌", "type": "seasoning", "default_storage_location": "pantry" },
+    { "id": 9, "name": "米・麺",     "type": "food",      "default_storage_location": null }
   ]
 }
 ```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| id | int | カテゴリID |
+| name | string | カテゴリ名 |
+| type | string | `food` / `seasoning` / `daily` |
+| default_storage_location | string \| null | 当該カテゴリのデフォルト保管場所。S-203の在庫追加時に保管場所を自動推測するために使用。NULLは推測なし |
 
 ---
 
@@ -207,10 +216,15 @@ Access-Control-Max-Age: 86400
 |-----------|-----|------|
 | page | int | ページ番号 |
 | per_page | int | 1ページ件数 |
-| category_id | int | カテゴリで絞り込み |
+| category_id | int | カテゴリで絞り込み(`null` を渡すと未分類のみ) |
 | storage_location | string | `fridge` / `freezer` / `pantry` |
 | q | string | 商品名の部分一致 |
 | sort | string | `name` / `expires_at` / `created_at`（先頭`-`で降順） |
+
+#### ソート挙動の特記事項
+- `sort=expires_at`(期限近い順)のとき、`expires_at IS NULL` のレコードは **末尾にまとめて** 返す
+- 実装イメージ: `ORDER BY expires_at IS NULL ASC, expires_at ASC`
+- `category_id IS NULL`(未分類)の在庫は `category` フィールドに `null` を返却する
 
 #### Response 200
 ```json
@@ -276,11 +290,11 @@ Access-Control-Max-Age: 86400
 | フィールド | 型 | 必須 | 制約 |
 |-----------|-----|------|------|
 | name | string | ○ | 1〜100文字 |
-| category_id | int | ○ | 存在するカテゴリID |
-| quantity | number | ○ | > 0 |
+| category_id | int \| null | × | 存在するカテゴリID。**未指定 or null は「未分類」扱い** |
+| quantity | number | ○ | > 0、小数2桁まで |
 | unit | string | ○ | `個`/`g`/`kg`/`ml`/`l`/`本`/`枚`等 |
 | purchased_at | date | × | YYYY-MM-DD |
-| expires_at | date | × | YYYY-MM-DD |
+| expires_at | date | × | YYYY-MM-DD、過去日も許容 |
 | storage_location | string | × | `fridge`/`freezer`/`pantry` |
 | memo | string | × | 最大500文字 |
 
@@ -326,6 +340,115 @@ Access-Control-Max-Age: 86400
   ]
 }
 ```
+
+### 4.7 POST /api/inventory/{id}/restore
+論理削除済みの在庫を復元する。S-201 のスワイプ「使い切った」を取り消す動線で使用。
+
+#### Request
+（ボディなし）
+
+#### Response 200
+```json
+{
+  "data": {
+    "id": 101,
+    "name": "鶏もも肉",
+    "category": { "id": 2, "name": "肉" },
+    "quantity": 300,
+    "unit": "g",
+    "purchased_at": "2026-05-05",
+    "expires_at": "2026-05-09",
+    "storage_location": "fridge",
+    "memo": null,
+    "created_at": "2026-05-05T18:21:00Z",
+    "updated_at": "2026-05-08T14:20:30Z"
+  }
+}
+```
+
+#### エラー
+| HTTP | code | 説明 |
+|------|------|------|
+| 404 | NOT_FOUND | 該当レコードが物理的に存在しない、または他ユーザーのリソース |
+| 409 | CONFLICT | 既に復元済み(`deleted_at IS NULL`) |
+
+#### 仕様
+- `deleted_at` を `NULL` に戻す処理
+- 認可: 自分のリソースのみ復元可
+- 取り消しの実用上、削除直後の連続呼び出しを想定
+
+### 4.8 GET /api/inventory/suggest
+S-203 在庫追加で使う商品名サジェスト。過去の登録履歴から、入力文字列に部分一致する商品名を返す。重複は除外する。
+
+#### Query
+| パラメータ | 型 | 必須 | 既定 | 説明 |
+|-----------|-----|------|------|------|
+| q | string | ○ | - | 部分一致クエリ(1文字以上) |
+| limit | int | × | 5 | 最大件数(1〜10) |
+
+#### Response 200
+```json
+{
+  "data": [
+    {
+      "name": "鶏もも肉",
+      "frequent_category": { "id": 2, "name": "肉" },
+      "frequent_storage_location": "fridge",
+      "last_used_at": "2026-05-01T18:00:00Z"
+    },
+    {
+      "name": "鶏むね肉",
+      "frequent_category": { "id": 2, "name": "肉" },
+      "frequent_storage_location": "fridge",
+      "last_used_at": "2026-04-22T18:00:00Z"
+    }
+  ]
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| name | string | 商品名(過去履歴の同名商品をユニーク化) |
+| frequent_category | object \| null | 過去登録での最頻カテゴリ |
+| frequent_storage_location | string \| null | 過去登録での最頻保管場所 |
+| last_used_at | datetime | 最終登録日時(新しい順に並ぶ) |
+
+#### 仕様
+- 過去30日以内に登録した在庫を対象(論理削除済みも含む履歴ベース)
+- `name` の重複は除外、最新の登録を代表として返す
+- 最頻値の決定: 過去登録のうち最頻のカテゴリ・保管場所(同数の場合は最新)
+- 並び順: `last_used_at` の降順
+- パフォーマンス上の上限あり(全件スキャンしない、直近100件程度を母集団とする)
+
+### 4.9 GET /api/inventory/summary
+S-101 ホームで在庫の状況を軽量に取得する集計エンドポイント。
+
+#### Request
+（パラメータなし）
+
+#### Response 200
+```json
+{
+  "data": {
+    "total_count": 12,
+    "expiring_count": 2,
+    "expired_count": 0,
+    "no_expiry_count": 5
+  }
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| total_count | int | 全在庫件数(`deleted_at IS NULL`) |
+| expiring_count | int | 期限が3日以内に切れるもの(0日含む、過去は含まない) |
+| expired_count | int | 既に期限切れ(過去日) |
+| no_expiry_count | int | 期限未入力 |
+
+#### 用途
+- ホームの提案CTA文言生成(「在庫12件 · うち2件が期限間近」)
+- 提案CTAの活性/非活性判定(`total_count >= 3`)
+- 期限間近セクションの「件数バッジ」表示
 
 ---
 
@@ -721,6 +844,22 @@ JWT不要。死活監視・ALBヘルスチェック用。
 | 日付 | 過去・未来とも可（在庫の `expires_at` は過去でも許容） |
 | ID | int（数値）で受ける。文字列ID不可 |
 
+### 9.1 単位(unit)の定義
+
+在庫の `unit` で扱う単位とその性質:
+
+| 単位 | カウンタブル | 意味 | 1個使うスワイプ(S-201) |
+|------|-------------|------|----------------------|
+| `個` | ○ | 個数 | 有効(-1) |
+| `本` | ○ | 本数 | 有効(-1) |
+| `枚` | ○ | 枚数 | 有効(-1) |
+| `g`  | × | グラム | 無効(詳細編集へ誘導) |
+| `kg` | × | キログラム | 無効 |
+| `ml` | × | ミリリットル | 無効 |
+| `l`  | × | リットル | 無効 |
+
+**カウンタブル単位**(`個`/`本`/`枚`)は1ずつ増減する操作が意味を持つ。重量・容積の単位は連続値のため、クイック操作の対象外とする。
+
 ---
 
 ## 10. 認可ルール
@@ -740,3 +879,4 @@ JWT不要。死活監視・ALBヘルスチェック用。
 | 版数 | 日付 | 内容 |
 |------|------|------|
 | 1.0 | 2026-05-07 | 初版作成 |
+| 1.1 | 2026-05-08 | 画面詳細設計(S-201/S-203/S-101)からのギャップを反映: <br>・ POST /api/inventory/{id}/restore 追加 <br>・ GET /api/inventory/suggest 追加 <br>・ GET /api/inventory/summary 追加 <br>・ GET /api/categories レスポンスに default_storage_location 追加 <br>・ POST /api/inventory の category_id を NULL 許容に変更 <br>・ GET /api/inventory のソート挙動明文化(期限なしを末尾に) <br>・ 単位(unit)の定義とカウンタブル分類を追加 |

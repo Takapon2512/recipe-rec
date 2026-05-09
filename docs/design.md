@@ -269,6 +269,7 @@ erDiagram
         INT id PK
         VARCHAR name
         VARCHAR type
+        VARCHAR default_storage_location
         DATETIME created_at
         DATETIME updated_at
         DATETIME deleted_at
@@ -374,11 +375,25 @@ Cognito の `sub` を外部キー的に保持し、業務データはこのテ�
 | id | INT | PK, AUTO_INCREMENT | カテゴリID |
 | name | VARCHAR(50) | NOT NULL | 名称（野菜・調味料等） |
 | type | VARCHAR(20) | NOT NULL | 'food' / 'seasoning' / 'daily' |
+| default_storage_location | VARCHAR(20) | NULL | 当該カテゴリのデフォルト保管場所(`fridge`/`freezer`/`pantry`/NULL)。S-203 在庫追加時の自動推測に使用 |
 | created_at | DATETIME | NOT NULL | |
 | updated_at | DATETIME | NOT NULL | |
 | deleted_at | DATETIME | NULL | 論理削除日時（NULL=有効） |
 
-初期データ：野菜、肉、魚、乳製品、調味料、米・麺、日用品 等
+初期データ：
+
+| name | type | default_storage_location |
+|------|------|-------------------------|
+| 野菜 | food | fridge |
+| 肉 | food | fridge |
+| 魚 | food | fridge |
+| 乳製品 | food | fridge |
+| 冷凍食品 | food | freezer |
+| アイス | food | freezer |
+| 調味料 | seasoning | pantry |
+| 米・麺 | food | pantry |
+| 乾物 | food | pantry |
+| 日用品 | daily | pantry |
 
 #### 3.2.3 inventory_items（在庫）
 
@@ -386,7 +401,7 @@ Cognito の `sub` を外部キー的に保持し、業務データはこのテ�
 |--------|-----|------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 在庫ID |
 | user_id | BIGINT | FK(users.id), NOT NULL | 所有者 |
-| category_id | INT | FK(categories.id) | カテゴリ |
+| category_id | INT | FK(categories.id), NULL | カテゴリ。**NULL = 未分類**(S-203でカテゴリ未選択時の扱い) |
 | name | VARCHAR(100) | NOT NULL | 商品名 |
 | quantity | DECIMAL(10,2) | NOT NULL | 数量 |
 | unit | VARCHAR(20) | NOT NULL | 単位（個・g・ml） |
@@ -497,6 +512,7 @@ CREATE TABLE categories (
   id INT NOT NULL AUTO_INCREMENT,
   name VARCHAR(50) NOT NULL,
   type VARCHAR(20) NOT NULL,
+  default_storage_location VARCHAR(20) DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME DEFAULT NULL,
@@ -624,6 +640,8 @@ CREATE TABLE recommendation_logs (
 | 論理削除 | **全テーブルで採用** | `deleted_at` で誤削除復元・監査性を担保 |
 | カテゴリのマスタ化 | 共通マスタ化 | 提案精度のため命名揺れを抑える |
 | recommendation_logs の論理削除 | 揃えて採用 | 全テーブル統一ルールを優先 |
+| 「未分類」をマスタ化するか | しない(`category_id IS NULL`で表現) | マスタにダミーレコードを増やさない、フロントで「未分類」ラベル表示 |
+| カテゴリのデフォルト保管場所 | `default_storage_location` カラムを持つ | S-203 在庫追加時の入力負荷削減 |
 
 ---
 
@@ -635,3 +653,4 @@ CREATE TABLE recommendation_logs (
 | 1.1 | 2026-05-06 | レシピ手順を `recipe_steps` テーブルへ正規化 |
 | 1.2 | 2026-05-06 | 全テーブルに `deleted_at` を追加し論理削除方針に変更 |
 | 1.3 | 2026-05-06 | バックエンド構成を Vercel + EC2 + RDS for MySQL に変更（API Gateway+Lambda廃止）、Post Confirmation Lambda Trigger を JIT プロビジョニング方式に変更 |
+| 1.4 | 2026-05-08 | 画面詳細設計(S-201/S-203/S-101)からのギャップを反映: <br>・ `categories.default_storage_location` カラム追加 <br>・ `inventory_items.category_id` を NULL 許容(=未分類)として明文化 <br>・ カテゴリマスタ初期データに保管場所デフォルトを追加 |
