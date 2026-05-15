@@ -70,17 +70,38 @@ export default function SignupPage() {
           userAttributes: { email: values.email },
         },
       });
-      router.push(
-        `/signup/verify?email=${encodeURIComponent(values.email)}`
-      );
+      router.push(`/signup/verify?email=${encodeURIComponent(values.email)}`);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "登録に失敗しました";
-      setSubmitError(message);
+      // エラー内容を適切な文言に振り分け
+      const name = (e as { name?: string }).name ?? "";
+      if (name === "UsernameExistsException") {
+        setSubmitError(
+          "このメールアドレスはすでに登録済みか、登録手続き中です。",
+        );
+      } else if (name === "InvalidPasswordException") {
+        setSubmitError("パスワードの要件を満たしていません。");
+      } else {
+        setSubmitError(
+          "登録に失敗しました。しばらく経ってから再試行してください。",
+        );
+      }
     }
   }
 
   async function onGoogleSignup() {
-    await signInWithRedirect({ provider: "Google" });
+    setSubmitError(null);
+    try {
+      await signInWithRedirect({ provider: "Google" });
+    } catch (e) {
+      const name = (e as { name?: string }).name ?? "";
+      if (name === "UserAlreadyAuthenticatedException") {
+        router.push("/signup");
+        return;
+      }
+      setSubmitError(
+        "Googleでの登録に失敗しました。しばらく経ってから再試行してください。",
+      );
+    }
   }
 
   return (

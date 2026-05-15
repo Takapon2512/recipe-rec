@@ -58,6 +58,11 @@ function VerifyForm() {
     defaultValues: { code: "" },
   });
 
+  if (!email) {
+    router.replace("/signup");
+    return null;
+  }
+
   async function onSubmit(values: VerifyValues) {
     setSubmitError(null);
     try {
