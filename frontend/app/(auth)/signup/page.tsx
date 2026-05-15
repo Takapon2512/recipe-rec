@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { signUp, signInWithRedirect } from "aws-amplify/auth";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,6 +39,7 @@ const signupSchema = z
 type SignupValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
+  const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
@@ -60,18 +63,24 @@ export default function SignupPage() {
   async function onSubmit(values: SignupValues) {
     setSubmitError(null);
     try {
-      // TODO: Cognito SDK signUp 呼び出し → 成功時 /signup/verify へ遷移
-      console.log("signup submit", values);
-      await new Promise((r) => setTimeout(r, 500));
+      await signUp({
+        username: values.email,
+        password: values.password,
+        options: {
+          userAttributes: { email: values.email },
+        },
+      });
+      router.push(
+        `/signup/verify?email=${encodeURIComponent(values.email)}`
+      );
     } catch (e) {
       const message = e instanceof Error ? e.message : "登録に失敗しました";
       setSubmitError(message);
     }
   }
 
-  function onGoogleSignup() {
-    // TODO: Cognito Hosted UI で Google IdP リダイレクト
-    console.log("google signup");
+  async function onGoogleSignup() {
+    await signInWithRedirect({ provider: "Google" });
   }
 
   return (
