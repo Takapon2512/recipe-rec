@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.local
+*.md
+README.md
+tmp/
+vendor/
+docker/mysql/
+.vscode/
+.idea/
+*.log
+build-errors.log

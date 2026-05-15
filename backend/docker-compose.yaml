@@ -1,0 +1,133 @@
+# ============================================================
+# 開発環境用 docker-compose
+#   - api        : Go バックエンド (ホットリロード)
+#   - mysql      : MySQL 8.0 (本番 RDS と同バージョン)
+#   - phpmyadmin : DB GUI
+# ============================================================
+
+services:
+  # ----------------------------------------------------------
+  # Go バックエンド API
+  # ----------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # ソースコードをマウント (ホットリロード)
+      - .:/app
+      # Go モジュールキャッシュ (再ビルド高速化)
+      - go-mod-cache:/go/pkg/mod
+      # Go ビルドキャッシュ
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      # アプリ設定
+      TZ: Asia/Tokyo
+      APP_ENV: development
+      APP_PORT: 8080
+      # DB 接続 (compose 内ネットワーク経由)
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: app
+      DB_PASSWORD: app_password
+      DB_NAME: app_db
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # ----------------------------------------------------------
+  # MySQL 8.0 (本番 RDS と同バージョン)
+  # ----------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: app-mysql
+    restart: unless-stopped
+    # Mac の Apple Silicon (M1/M2/M3) でも動くよう platform 指定したい場合は
+    # 下記を有効化してください。Intel Mac (amd64) なら不要です。
+    platform: linux/amd64
+    ports:
+      # ホストの 3307 → コンテナの 3306
+      # (ローカルの MySQL と衝突しないよう 3307 に割当)
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: app_db
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app_password
+      TZ: Asia/Tokyo
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+09:00
+      - --skip-character-set-client-handshake
+    volumes:
+      # データ永続化
+      - mysql-data:/var/lib/mysql
+      # 初期化用 SQL を置きたい場合はここに .sql / .sh を配置
+      # (初回起動時のみ自動実行される)
+      - ./docker/mysql/initdb:/docker-entrypoint-initdb.d
+      # my.cnf を上書きしたい場合
+      - ./docker/mysql/conf.d:/etc/mysql/conf.d
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "-proot_password",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - app-network
+
+  # ----------------------------------------------------------
+  # phpMyAdmin (DB GUI)
+  # ----------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: app-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root_password
+      UPLOAD_LIMIT: 64M
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+# ----------------------------------------------------------
+# Volumes (永続化データ)
+# ----------------------------------------------------------
+volumes:
+  mysql-data:
+    name: app-mysql-data
+  go-mod-cache:
+    name: app-go-mod-cache
+  go-build-cache:
+    name: app-go-build-cache
+
+# ----------------------------------------------------------
+# Networks
+# ----------------------------------------------------------
+networks:
+  app-network:
+    name: app-network
+    driver: bridge
