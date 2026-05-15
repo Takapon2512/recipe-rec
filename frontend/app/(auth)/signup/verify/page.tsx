@@ -78,8 +78,22 @@ function VerifyForm() {
       await confirmSignUp({ username: email, confirmationCode: values.code });
       router.push("/login");
     } catch (e) {
-      const message = e instanceof Error ? e.message : "確認に失敗しました";
-      setSubmitError(message);
+      const name = (e as { name?: string }).name ?? "";
+      if (name === "CodeMismatchException") {
+        setSubmitError("確認コードが正しくありません。");
+      } else if (name === "ExpiredCodeException") {
+        setSubmitError(
+          "確認コードの有効期限が切れています。再送してください。",
+        );
+      } else if (name === "LimitExceededException") {
+        setSubmitError(
+          "試行回数が上限に達しました。しばらく経ってから再試行してください。",
+        );
+      } else {
+        setSubmitError(
+          "確認に失敗しました。しばらく経ってから再試行してください。",
+        );
+      }
     }
   }
 
