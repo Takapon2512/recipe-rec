@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -48,6 +48,15 @@ function VerifyForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const id = setInterval(() => {
+      setSecondsLeft((s) => Math.max(0, s - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [secondsLeft]);
 
   const {
     register,
@@ -81,9 +90,18 @@ function VerifyForm() {
     try {
       await resendSignUpCode({ username: email });
       setResendMessage("確認コードを再送しました");
+      setSecondsLeft(60);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "再送に失敗しました";
-      setSubmitError(message);
+      const name = (e as { name?: string }).name ?? "";
+      if (name === "LimitExceededException") {
+        setSubmitError(
+          "再送の試行回数が上限に達しました。しばらく経ってから再試行してください。",
+        );
+        setSecondsLeft(60);
+      } else {
+        const message = e instanceof Error ? e.message : "再送に失敗しました";
+        setSubmitError(message);
+      }
     } finally {
       setResending(false);
     }
@@ -145,9 +163,13 @@ function VerifyForm() {
           type="button"
           className="text-primary underline-offset-4 hover:underline disabled:opacity-50"
           onClick={handleResend}
-          disabled={resending}
+          disabled={resending || secondsLeft > 0}
         >
-          {resending ? "送信中..." : "再送する"}
+          {resending
+            ? "送信中..."
+            : secondsLeft > 0
+              ? `再送する (${secondsLeft}秒)`
+              : "再送する"}
         </button>
       </p>
 
