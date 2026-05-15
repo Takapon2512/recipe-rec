@@ -1,0 +1,14 @@
+version: "1"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck # エラーチェック漏れ
+    - govet # 標準のvet
+    - staticcheck # 静的解析(型エラー含む)
+    - unused # 未使用変数
+    - gosimple # 簡略化提案
+    - ineffassign # 無効な代入
+    - typecheck # 型チェック
