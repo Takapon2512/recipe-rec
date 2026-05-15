@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,6 +22,25 @@ const verifySchema = z.object({
 type VerifyValues = z.infer<typeof verifySchema>;
 
 export default function VerifyPage() {
+  return (
+    <Suspense fallback={<VerifyFallback />}>
+      <VerifyForm />
+    </Suspense>
+  );
+}
+
+function VerifyFallback() {
+  return (
+    <div className="space-y-6">
+      <header className="flex h-14 items-center">
+        <h1 className="text-xl font-semibold text-foreground">メール確認</h1>
+      </header>
+      <p className="text-sm text-muted-foreground">読み込み中...</p>
+    </div>
+  );
+}
+
+function VerifyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
