@@ -88,7 +88,26 @@ https://www.figma.com/design/{file_key}/{file_name}?node-id={node_id}
 
 ### 1.5 Tailwind CSS との対応
 
-実装時は Tailwind の `tailwind.config.js` でデザイントークンと同一の値を定義し、Figmaと実装の乖離を防ぐ。
+実装は **Tailwind CSS v4 + shadcn/ui (Base UI 派生)** を使用する。Tailwind v4 では `tailwind.config.js` を使わず、`frontend/app/globals.css` の `@theme` ブロックに CSS 変数として定義する。
+
+設計トークンは shadcn が標準で持つセマンティック変数に上書きマッピングし、shadcn 製コンポーネント (Button, Input 等) がそのままブランドカラーに揃うようにする。`color/text-primary` のように Tailwind のユーティリティ命名 (`text-{color}`) と衝突する名前は、実装側で別名に寄せる。
+
+#### マッピング表
+
+| 設計トークン (§1.4) | shadcn CSS 変数 | Tailwind ユーティリティ例 |
+|---|---|---|
+| `color/primary` `#3B82F6` | `--primary` | `bg-primary`, `text-primary-foreground` |
+| `color/primary-hover` `#2563EB` | `--primary-hover` (追加) | `hover:bg-primary-hover` |
+| `color/danger` `#EF4444` | `--destructive` | `bg-destructive`, `text-destructive` |
+| `color/success` `#10B981` | `--success` (追加) | `bg-success`, `text-success` |
+| `color/warning` `#F59E0B` | `--warning` (追加) | `bg-warning`, `text-warning` |
+| `color/text-primary` `#111827` | `--foreground` | `text-foreground` |
+| `color/text-secondary` `#6B7280` | `--muted-foreground` | `text-muted-foreground` |
+| `color/background` `#F9FAFB` | `--background` | `bg-background` |
+| `color/surface` `#FFFFFF` | `--card` (`--popover` も同値) | `bg-card`, `bg-popover` |
+| `color/border` `#E5E7EB` | `--border` | `border-border` |
+
+> 命名衝突の補足: 設計上の「`text-primary` = 本文色 (#111827)」を Tailwind 側でそのまま `text-primary` クラスにすると、`text-{color}` ルールにより「`primary` (#3B82F6) で塗る文字色」と解釈されてしまう。実装では `--foreground` (= `text-foreground` クラス) に寄せて運用する。本ドキュメント以降の `color/text-primary` 等の記載は、実装上は `text-foreground` 等に読み替える。
 
 ---
 
