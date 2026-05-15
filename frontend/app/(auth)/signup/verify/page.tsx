@@ -113,8 +113,9 @@ function VerifyForm() {
         );
         setSecondsLeft(60);
       } else {
-        const message = e instanceof Error ? e.message : "再送に失敗しました";
-        setSubmitError(message);
+        setSubmitError(
+          "再送に失敗しました。しばらく経ってから再試行してください。",
+        );
       }
     } finally {
       setResending(false);

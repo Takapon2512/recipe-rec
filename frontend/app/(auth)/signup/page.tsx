@@ -95,7 +95,7 @@ export default function SignupPage() {
     } catch (e) {
       const name = (e as { name?: string }).name ?? "";
       if (name === "UserAlreadyAuthenticatedException") {
-        router.push("/home");
+        router.replace("/home");
         return;
       }
       setSubmitError(
