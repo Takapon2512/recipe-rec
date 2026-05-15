@@ -1,0 +1,53 @@
+# ============================================================
+# 開発環境用 docker-compose (フロントエンド)
+#   - web : Next.js 開発サーバ (HMR)
+# 本番は Vercel デプロイ (infrastructure.md 4.1)
+# ============================================================
+
+services:
+  # ----------------------------------------------------------
+  # Next.js フロントエンド
+  # ----------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # ソースコードをマウント (HMR)
+      - .:/app
+      # node_modules はコンテナ側を優先 (ホストとアーキ差異を回避)
+      - web-node-modules:/app/node_modules
+      # Next.js ビルドキャッシュ
+      - web-next-cache:/app/.next
+    environment:
+      TZ: Asia/Tokyo
+      NODE_ENV: development
+      # ファイル変更検知 (Docker Desktop のボリュームマウントで稀に必要)
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      # API 接続先 (ホスト側で動く backend/docker-compose の api:8080 を参照)
+      # backend と同一ネットワークに繋ぐ場合は http://api:8080 に変更
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+    networks:
+      - web-network
+
+# ----------------------------------------------------------
+# Volumes (永続化データ)
+# ----------------------------------------------------------
+volumes:
+  web-node-modules:
+    name: app-web-node-modules
+  web-next-cache:
+    name: app-web-next-cache
+
+# ----------------------------------------------------------
+# Networks
+# ----------------------------------------------------------
+networks:
+  web-network:
+    name: web-network
+    driver: bridge
