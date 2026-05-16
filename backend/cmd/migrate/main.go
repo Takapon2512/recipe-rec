@@ -81,7 +81,11 @@ func buildDSN(table string) string {
 	host := getenv("DB_HOST", "localhost")
 	port := getenv("DB_PORT", "3306")
 	user := getenv("DB_USER", "app")
-	password := getenv("DB_PASSWORD", "app_password")
+	password := os.Getenv("DB_PASSWORD")
+	// パスワードはハードコードから除外
+	if password == "" {
+		log.Fatal("DB_PASSWORD environment variable is required")
+	}
 	dbname := getenv("DB_NAME", "app_db")
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?multiStatements=true&parseTime=true&x-migrations-table=%s",
 		user, password, host, port, dbname, table)
