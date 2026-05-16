@@ -31,7 +31,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 		userService := service.NewUserService(userRepo)
 		meHandler := NewMeHandler(userService)
 
-		authorized.GET("/me", meHandler.Get) // TODO: 実装
+		authorized.GET("/me", meHandler.Get)
 		authorized.PATCH("/me", nil)
 		authorized.DELETE("/me", nil)
 
