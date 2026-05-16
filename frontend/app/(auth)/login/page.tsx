@@ -29,6 +29,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -166,6 +167,20 @@ export default function LoginPage() {
       >
         Googleでログイン
       </Button>
+
+      <p className="text-center text-sm">
+        <button
+          type="button"
+          className="text-primary underline-offset-4 hover:underline"
+          onClick={() => {
+            const email = getValues("email");
+            if (email) sessionStorage.setItem("passwordResetEmail", email);
+            router.push("/password-reset");
+          }}
+        >
+          パスワードを忘れた場合
+        </button>
+      </p>
 
       <p className="text-center text-sm text-muted-foreground">
         アカウントをお持ちでない方は{" "}
