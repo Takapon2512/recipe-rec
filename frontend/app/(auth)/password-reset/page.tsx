@@ -71,21 +71,6 @@ function msFromNow(durationMs: number): number {
   return Date.now() + durationMs;
 }
 
-function StepIndicator({ step }: { step: Step }) {
-  const atConfirm = step === "confirm" || step === "done";
-  return (
-    <div className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span className={step === "request" ? "font-medium text-primary" : ""}>
-        ①メール送信
-      </span>
-      <span>→</span>
-      <span className={atConfirm ? "font-medium text-primary" : ""}>
-        ②新パスワード設定
-      </span>
-    </div>
-  );
-}
-
 function PasswordChecklist({ password }: { password: string }) {
   const checks = [
     { label: "8文字以上", ok: password.length >= 8 },
@@ -240,7 +225,7 @@ export default function PasswordResetPage() {
           "送信回数の上限に達しました。しばらくしてからお試しください",
         );
         setIsLocked(true);
-        setLockUntil(msFromNow(10 * 1000));
+        setLockUntil(msFromNow(10 * 1000 * 60));
         return;
       }
       if (name === "TooManyRequestsException") {
@@ -409,6 +394,15 @@ export default function PasswordResetPage() {
     <div className="space-y-6">
       {/* Header */}
       <header className="flex h-14 items-center gap-3">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          aria-label="戻る"
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          戻る
+        </button>
         <h1 className="text-xl font-semibold text-foreground">
           パスワードをリセット
         </h1>
@@ -723,7 +717,7 @@ export default function PasswordResetPage() {
           <DialogHeader>
             <DialogTitle>パスワードリセットを中断しますか？</DialogTitle>
             <DialogDescription>
-              中断すると、送信されたコードは無効になります
+              中断すると最初からやり直す必要があります
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

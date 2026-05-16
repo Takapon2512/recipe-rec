@@ -29,6 +29,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -172,8 +173,7 @@ export default function LoginPage() {
           type="button"
           className="text-primary underline-offset-4 hover:underline"
           onClick={() => {
-            const email = (document.getElementById("email") as HTMLInputElement)
-              ?.value;
+            const email = getValues("email");
             if (email) sessionStorage.setItem("passwordResetEmail", email);
             router.push("/password-reset");
           }}
