@@ -3,6 +3,8 @@ package handler
 import (
 	"github.com/Takapon2512/recipe-recommend/backend/internal/config"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/middleware"
+	"github.com/Takapon2512/recipe-recommend/backend/internal/repository"
+	"github.com/Takapon2512/recipe-recommend/backend/internal/service"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
@@ -24,7 +26,12 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 	authorized := r.Group("/api")
 	authorized.Use(middleware.Auth(cfg))
 	{
-		authorized.GET("/me", nil) // TODO: 実装
+		// DI組み立て
+		userRepo := repository.NewUserRepository(db)
+		userService := service.NewUserService(userRepo)
+		meHandler := NewMeHandler(userService)
+
+		authorized.GET("/me", meHandler.Get) // TODO: 実装
 		authorized.PATCH("/me", nil)
 		authorized.DELETE("/me", nil)
 
