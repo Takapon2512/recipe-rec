@@ -46,8 +46,8 @@ CREATE TABLE inventory_items (
   KEY idx_user_id (user_id),
   KEY idx_user_expires (user_id, expires_at),
   KEY idx_deleted_at (deleted_at),
-  CONSTRAINT fk_inv_user FOREIGN KEY (user_id)     REFERENCES users(id)      ON DELETE CASCADE,
-  CONSTRAINT fk_inv_cat FOREIGN KEY (category_id) REFERENCES categories(id) 　ON DELETE SET NULL
+  CONSTRAINT fk_inv_user FOREIGN KEY (user_id)     REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_inv_cat FOREIGN KEY (category_id) REFERENCES categories(id)　ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- recipes
@@ -93,7 +93,7 @@ CREATE TABLE recipe_steps (
   updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at   DATETIME DEFAULT NULL,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_recipe_step_active (recipe_id, step_no, (IFNULL(deleted_at, '9999-12-31')))
+  UNIQUE KEY uk_recipe_step_active (recipe_id, step_no, (IFNULL(deleted_at, '9999-12-31'))),
   CONSTRAINT fk_step_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
