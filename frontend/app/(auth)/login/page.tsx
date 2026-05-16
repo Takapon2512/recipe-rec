@@ -53,9 +53,7 @@ export default function LoginPage() {
 
       // メール未確認のユーザーは確認画面へ
       if (nextStep?.signInStep === "CONFIRM_SIGN_UP") {
-        router.push(
-          `/signup/verify?email=${encodeURIComponent(values.email)}`,
-        );
+        router.push(`/signup/verify?email=${encodeURIComponent(values.email)}`);
         return;
       }
 
@@ -70,12 +68,7 @@ export default function LoginPage() {
       ) {
         setSubmitError("メールアドレスまたはパスワードが正しくありません。");
       } else if (name === "UserNotConfirmedException") {
-        setSubmitError(
-          "メールアドレスが未確認です。確認コードを入力してください。",
-        );
-        router.push(
-          `/signup/verify?email=${encodeURIComponent(values.email)}`,
-        );
+        router.push(`/signup/verify?email=${encodeURIComponent(values.email)}`);
       } else if (name === "UserAlreadyAuthenticatedException") {
         router.replace("/home");
       } else {
@@ -168,6 +161,7 @@ export default function LoginPage() {
         variant="outline"
         size="lg"
         className="w-full"
+        disabled={isSubmitting}
         onClick={onGoogleLogin}
       >
         Googleでログイン
