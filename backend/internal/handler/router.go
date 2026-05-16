@@ -21,7 +21,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 	r.Use(middleware.Logger())
 	r.Use(middleware.CORS(cfg.AllowedOrigins))
 
-	// r.GET("/api/health", NewHealthHandler())
+	r.GET("/api/health", NewHealthHandler())
 
 	authorized := r.Group("/api")
 	authorized.Use(middleware.Auth(cfg))
