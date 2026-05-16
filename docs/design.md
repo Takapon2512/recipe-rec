@@ -12,7 +12,7 @@
 |------|------|
 | 認証基盤 | Amazon Cognito User Pool（単独構成） |
 | 認証方式 | ① メールアドレス + パスワード ② Google OAuth (OIDC) |
-| MFA | TOTP方式（Google Authenticator等）※メール認証経路で必須 |
+| MFA | **初期実装では無効**（Cognito側で非アクティブ）。将来 TOTP（Google Authenticator等）をメール認証経路で必須化する予定 |
 | トークン形式 | JWT（IDトークン・アクセストークン・リフレッシュトークン） |
 | トークン有効期限 | アクセストークン:1時間 / リフレッシュトークン:30日 |
 | パスワードポリシー | 8文字以上、英大小文字・数字・記号を含む |
@@ -32,11 +32,17 @@
 - **Google**：OIDC連携（クライアントID/シークレットをCognitoに設定）
 
 #### MFA設定
-- 経路ごとの方針：
+
+> **現状（2026-05-16時点）**: Cognito User Pool 側で MFA は非アクティブ。初期リリースは MFA なしで進める。S-004（MFA初期設定）／S-006（MFAコード入力）の画面実装は後続フェーズへ延期。以下は将来 MFA を有効化したときの目標仕様。
+
+- 経路ごとの方針（将来）：
   - Cognitoネイティブ（メール+パスワード）：**MFA必須**（TOTP）
   - Google経由：MFAはGoogle側に委譲（Cognito側では追加要求しない）
+- 有効化時の移行：既存ユーザーは初回ログイン時に MFA_SETUP チャレンジを受け、S-004 へ誘導する想定
 
 ### 1.3 サインアップフロー（メール認証）
+
+> 以下シーケンスの「MFA初期設定」ブロックは MFA 有効化後の目標フロー。初期実装では `ConfirmSignUp` 完了後にそのまま S-005 ログイン画面へ遷移する。
 
 ```mermaid
 sequenceDiagram
@@ -66,6 +72,8 @@ sequenceDiagram
 ```
 
 ### 1.4 ログインフロー（メール認証 + MFA）
+
+> 以下シーケンスの `SOFTWARE_TOKEN_MFA` チャレンジ部分は MFA 有効化後の挙動。初期実装では `InitiateAuth` の応答が直接 JWT になり、MFAコード入力ステップ（S-006）はスキップされる。
 
 ```mermaid
 sequenceDiagram
