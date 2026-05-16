@@ -31,7 +31,9 @@ func NewVerifier(cfg *config.Config) *Verifier {
 	jwksURL := issuer + "/.well-known/jwks.json"
 
 	cache := jwk.NewCache(context.Background())
-	cache.Register(jwksURL)
+	if err := cache.Register(jwksURL); err != nil {
+		panic(fmt.Errorf("JWKsキャッシュ登録失敗: %w", err))
+	}
 
 	return &Verifier{
 		cache:    cache,

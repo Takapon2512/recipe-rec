@@ -45,7 +45,11 @@ func main() {
 	sqlDB.SetMaxOpenConns(10)
 	sqlDB.SetMaxIdleConns(5)
 	sqlDB.SetConnMaxLifetime(time.Hour)
-	defer sqlDB.Close()
+	defer func() {
+		if err := sqlDB.Close(); err != nil {
+			slog.Error("DB切断エラー", "error", err)
+		}
+	}()
 
 	// ルーター構築
 	r := handler.NewRouter(cfg, db)
