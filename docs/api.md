@@ -890,41 +890,33 @@ JWT不要。死活監視・ALBヘルスチェック用。
 ---
 
 ### 12.2 ディレクトリ構成
+```
 backend/
 ├── cmd/
 │   └── api/
-│       └── main.go                  # エントリポイント。サーバ起動・DI組み立て
+│       └── main.go
 │
-├── internal/                        # 外部パッケージからimport不可
-│   │
+├── internal/
 │   ├── config/
-│   │   └── config.go                # 環境変数の読み込み・バリデーション
+│   │   └── config.go
 │   │
-│   ├── handler/                     # HTTPハンドラ（リクエスト/レスポンス変換のみ）
-│   │   ├── router.go                # ルーティング定義（chi）
-│   │   ├── me.go                    # GET /api/me, PATCH /api/me, DELETE /api/me
-│   │   ├── inventory.go             # /api/inventory/*
-│   │   ├── category.go              # GET /api/categories
-│   │   ├── recipe.go                # /api/recipes/*
-│   │   ├── meal_plan.go             # /api/meal-plans/*
-│   │   ├── recommendation.go        # /api/recommendations/*
-│   │   └── health.go                # GET /api/health
+│   ├── handler/
+│   │   ├── router.go
+│   │   ├── me.go
+│   │   ├── inventory.go
+│   │   ├── category.go
+│   │   ├── recipe.go
+│   │   ├── meal_plan.go
+│   │   ├── recommendation.go
+│   │   └── health.go
 │   │
 │   ├── middleware/
-│   │   ├── auth.go                  # JWT検証・ctxへのユーザー情報注入
-│   │   ├── cors.go                  # CORSヘッダ設定
-│   │   ├── logger.go                # リクエストログ（X-Request-Id付与）
-│   │   └── ratelimit.go             # レート制限（§1.9）
+│   │   ├── auth.go
+│   │   ├── cors.go
+│   │   ├── logger.go
+│   │   └── ratelimit.go
 │   │
-│   ├── service/                     # ビジネスロジック
-│   │   ├── user.go                  # JITプロビジョニング・プロフィール更新
-│   │   ├── inventory.go             # 在庫CRUD・期限アラート
-│   │   ├── category.go              # カテゴリ取得
-│   │   ├── recipe.go                # レシピCRUD
-│   │   ├── meal_plan.go             # 献立CRUD
-│   │   └── recommendation.go        # ジョブ登録・Bedrock呼び出し・結果取得
-│   │
-│   ├── repository/                  # DB操作（SQLのみ。ロジックは持たない）
+│   ├── service/
 │   │   ├── user.go
 │   │   ├── inventory.go
 │   │   ├── category.go
@@ -932,7 +924,15 @@ backend/
 │   │   ├── meal_plan.go
 │   │   └── recommendation.go
 │   │
-│   ├── model/                       # DBレコードと対応する構造体・ドメイン型
+│   ├── repository/
+│   │   ├── user.go
+│   │   ├── inventory.go
+│   │   ├── category.go
+│   │   ├── recipe.go
+│   │   ├── meal_plan.go
+│   │   └── recommendation.go
+│   │
+│   ├── model/
 │   │   ├── user.go
 │   │   ├── inventory.go
 │   │   ├── category.go
@@ -941,22 +941,23 @@ backend/
 │   │   └── recommendation.go
 │   │
 │   ├── cognito/
-│   │   └── verifier.go              # JWKsキャッシュ・JWT署名検証ロジック
+│   │   └── verifier.go
 │   │
 │   └── bedrock/
-│       └── client.go                # Bedrock InvokeModel ラッパー
+│       └── client.go
 │
 ├── db/
-│   └── migrations/                  # golang-migrate用SQLファイル
+│   └── migrations/
 │       ├── 000001_create_users.up.sql
 │       ├── 000001_create_users.down.sql
 │       ├── 000002_create_categories.up.sql
 │       ├── 000002_create_categories.down.sql
-│       └── ...（テーブルごとに連番）
+│       └── ...
 │
-├── .env.example                     # 環境変数のサンプル（シークレットは含めない）
+├── .env.example
 ├── go.mod
 ├── go.sum
+```
 
 ---
 
@@ -975,6 +976,7 @@ backend/
 ---
 
 ### 12.4 依存関係
+```
 main.go
 └─ handler（router）
 ├─ middleware（auth / cors / logger / ratelimit）
@@ -982,6 +984,7 @@ main.go
 ├─ repository（DB）
 ├─ cognito（JWT検証）
 └─ bedrock（LLM）
+```
 
 依存は上から下方向のみ。`repository` が `service` を参照するような逆方向の依存は禁止。
 
