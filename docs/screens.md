@@ -434,9 +434,9 @@ EmptyState の構成に近いが、`color/danger` 系のアクセントを軽く
 | **S-001** | 認証 | スプラッシュ / ランディング | `/` | [Figma]({TBD}) | 不要 |
 | **S-002** | 認証 | サインアップ | `/signup` | [Figma]({TBD}) | 不要 |
 | **S-003** | 認証 | メール検証コード入力 | `/signup/verify` | [Figma]({TBD}) | 不要 |
-| **S-004** | 認証 | MFA初期設定（QR表示） | `/signup/mfa-setup` | [Figma]({TBD}) | 不要 |
+| **S-004** | 認証 | MFA初期設定（QR表示）※初期実装では延期 | `/signup/mfa-setup` | [Figma]({TBD}) | 不要 |
 | **S-005** | 認証 | ログイン | `/login` | [Figma]({TBD}) | 不要 |
-| **S-006** | 認証 | MFAコード入力 | `/login/mfa` | [Figma]({TBD}) | 不要 |
+| **S-006** | 認証 | MFAコード入力※初期実装では延期 | `/login/mfa` | [Figma]({TBD}) | 不要 |
 | **S-007** | 認証 | パスワードリセット | `/password-reset` | [Figma]({TBD}) | 不要 |
 | **S-101** | ホーム | ホーム / ダッシュボード | `/home` | [Figma]({TBD}) | 必要 |
 | **S-201** | 在庫 | 在庫一覧 | `/inventory` | [Figma]({TBD}) | 必要 |
@@ -532,6 +532,9 @@ flowchart LR
 - **エッジケース**: コード期限切れ、誤入力（残り試行回数表示）
 
 ### S-004 MFA初期設定（QR表示）
+
+> **初期実装では延期**: Cognito 側で MFA が非アクティブのため本画面は未実装。詳細は `docs/screens/S-004/detail.md` を参照。MFA 有効化フェーズで着手する。
+
 - **URL**: `/signup/mfa-setup`
 - **Figma**: [{TBD}]({TBD})
 - **API**: Cognito SDK `associateSoftwareToken` → `verifySoftwareToken`
@@ -548,6 +551,9 @@ flowchart LR
   - Googleユーザー → 直接 S-101
 
 ### S-006 MFAコード入力
+
+> **初期実装では延期**: Cognito 側で MFA が非アクティブのため本画面は未実装。S-005 ログイン成功後は直接 S-101 へ遷移する。MFA 有効化フェーズで着手する。
+
 - **URL**: `/login/mfa`
 - **Figma**: [{TBD}]({TBD})
 - **API**: Cognito SDK `respondToAuthChallenge`
@@ -875,7 +881,7 @@ flowchart LR
 
 優先度順に実装：
 
-1. **基盤**：認証フロー（S-001〜S-007）+ 共通レイアウト + ホーム（S-101）
+1. **基盤**：認証フロー（S-001〜S-003、S-005、S-007）+ 共通レイアウト + ホーム（S-101）。S-004 / S-006 は MFA 有効化フェーズへ延期
 2. **コア機能**：在庫管理（S-201〜S-205）
 3. **コア機能**：レシピ管理（S-301〜S-303）
 4. **コア機能**：献立カレンダー（S-501〜S-503）

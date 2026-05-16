@@ -294,7 +294,7 @@ EC2は起動時にIAMロール経由で取得。
 |------|------|
 | プールタイプ | User Pool（Identity Poolなし） |
 | サインイン | email |
-| MFA | TOTP必須（メール認証経路）／Google経由は委譲 |
+| MFA | **初期実装では無効**（非アクティブ）／将来 TOTP必須（メール認証経路）、Google経由は委譲 |
 | パスワードポリシー | 8文字以上、英大小・数字・記号 |
 | トリガー | なし（JIT方式のためPost Confirmation Lambda不要） |
 | ドメイン | Cognito Hosted UI: `auth.example.com`（カスタム） |
