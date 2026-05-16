@@ -47,7 +47,7 @@ CREATE TABLE inventory_items (
   KEY idx_user_expires (user_id, expires_at),
   KEY idx_deleted_at (deleted_at),
   CONSTRAINT fk_inv_user FOREIGN KEY (user_id)     REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_inv_cat FOREIGN KEY (category_id) REFERENCES categories(id)　ON DELETE SET NULL
+  CONSTRAINT fk_inv_cat FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- recipes
