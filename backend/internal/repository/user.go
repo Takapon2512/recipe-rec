@@ -19,7 +19,7 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 func (r *UserRepository) FindByCognitoSub(cognitoSub string) (*model.User, error) {
 	var user model.User
 
-	err := r.db.Where("cognito_sub = ? AND deleted_at IS NULL", cognitoSub).First(&user).Error
+	err := r.db.Where("cognito_sub = ?", cognitoSub).First(&user).Error
 	if err != nil {
 		return nil, err
 	}

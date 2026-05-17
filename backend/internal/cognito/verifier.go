@@ -61,12 +61,11 @@ func (v *Verifier) Verify(ctx context.Context, tokenStr string) (*Claims, error)
 	}
 
 	sub := token.Subject()
-	email, _ := token.Get("email")
-	provider, _ := token.Get("custom:provider")
+	emailRaw, _ := token.Get("email")
+	email, _ := emailRaw.(string)
 
-	return &Claims{
-		Sub:      sub,
-		Email:    email.(string),
-		Provider: provider.(string),
-	}, nil
+	providerRaw, _ := token.Get("custom:provider")
+	provider, _ := providerRaw.(string)
+
+	return &Claims{Sub: sub, Email: email, Provider: provider}, nil
 }

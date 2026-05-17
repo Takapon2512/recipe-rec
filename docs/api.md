@@ -880,7 +880,7 @@ JWT不要。死活監視・ALBヘルスチェック用。
 | 項目 | 採用 |
 |------|------|
 | 言語 | Go 1.22+ |
-| HTTPフレームワーク | [chi](https://github.com/go-chi/chi)（軽量・標準net/http互換） |
+| HTTPフレームワーク | [gin](https://github.com/gin-gonic/gin)|
 | DBドライバ | [GORM](https://gorm.io/)（ORM・マイグレーション機能込み） |
 | JWT検証 | [lestrrat-go/jwx](https://github.com/lestrrat-go/jwx)（Cognito JWKs対応） |
 | 設定管理 | 環境変数 + [godotenv](https://github.com/joho/godotenv)（ローカル開発用） |

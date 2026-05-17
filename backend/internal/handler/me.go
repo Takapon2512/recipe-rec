@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Takapon2512/recipe-recommend/backend/internal/cognito"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/middleware"
@@ -18,10 +19,12 @@ func NewMeHandler(userService *service.UserService) *MeHandler {
 }
 
 type MeResponse struct {
-	ID          uint64  `json:"id"`
-	Email       string  `json:"email"`
-	DisplayName *string `json:"display_name"`
-	Provider    string  `json:"provider"`
+	ID          uint64    `json:"id"`
+	Email       string    `json:"email"`
+	DisplayName *string   `json:"display_name"`
+	Provider    string    `json:"provider"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // Getはユーザー情報取得（もしくは新規作成）
@@ -42,10 +45,15 @@ func (h *MeHandler) Get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MeResponse{
-		ID:          user.ID,
-		Email:       user.Email,
-		DisplayName: user.DisplayName,
-		Provider:    user.Provider,
-	})
+	c.JSON(
+		http.StatusOK,
+		gin.H{
+			"data": MeResponse{
+				ID:          user.ID,
+				Email:       user.Email,
+				DisplayName: user.DisplayName,
+				Provider:    user.Provider,
+			},
+		},
+	)
 }

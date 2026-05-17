@@ -21,6 +21,12 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 	r.Use(middleware.Logger())
 	r.Use(middleware.CORS(cfg.AllowedOrigins))
 
+	stub := func(c *gin.Context) {
+		c.JSON(http.StatusNotImplemented, gin.H{
+			"error": gin.H{"code": "NOT_IMPLEMENTED", "message": "not implemented"},
+		})
+	}
+
 	r.GET("/api/health", NewHealthHandler())
 
 	authorized := r.Group("/api")
@@ -32,35 +38,35 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 		meHandler := NewMeHandler(userService)
 
 		authorized.GET("/me", meHandler.Get)
-		authorized.PATCH("/me", nil)
-		authorized.DELETE("/me", nil)
+		authorized.PATCH("/me", stub)
+		authorized.DELETE("/me", stub)
 
-		authorized.GET("/categories", nil)
+		authorized.GET("/categories", stub)
 
-		authorized.GET("/inventory", nil)
-		authorized.POST("/inventory", nil)
-		authorized.GET("/inventory/expiring", nil)
-		authorized.GET("/inventory/suggest", nil)
-		authorized.GET("/inventory/summary", nil)
-		authorized.GET("/inventory/:id", nil)
-		authorized.PATCH("/inventory/:id", nil)
-		authorized.DELETE("/inventory/:id", nil)
-		authorized.POST("/inventory/:id/restore", nil)
+		authorized.GET("/inventory", stub)
+		authorized.POST("/inventory", stub)
+		authorized.GET("/inventory/expiring", stub)
+		authorized.GET("/inventory/suggest", stub)
+		authorized.GET("/inventory/summary", stub)
+		authorized.GET("/inventory/:id", stub)
+		authorized.PATCH("/inventory/:id", stub)
+		authorized.DELETE("/inventory/:id", stub)
+		authorized.POST("/inventory/:id/restore", stub)
 
-		authorized.GET("/recipes", nil)
-		authorized.POST("/recipes", nil)
-		authorized.GET("/recipes/:id", nil)
-		authorized.PATCH("/recipes/:id", nil)
-		authorized.DELETE("/recipes/:id", nil)
+		authorized.GET("/recipes", stub)
+		authorized.POST("/recipes", stub)
+		authorized.GET("/recipes/:id", stub)
+		authorized.PATCH("/recipes/:id", stub)
+		authorized.DELETE("/recipes/:id", stub)
 
-		authorized.GET("/meal-plans", nil)
-		authorized.POST("/meal-plans", nil)
-		authorized.GET("/meal-plans/:id", nil)
-		authorized.PATCH("/meal-plans/:id", nil)
-		authorized.DELETE("/meal-plans/:id", nil)
+		authorized.GET("/meal-plans", stub)
+		authorized.POST("/meal-plans", stub)
+		authorized.GET("/meal-plans/:id", stub)
+		authorized.PATCH("/meal-plans/:id", stub)
+		authorized.DELETE("/meal-plans/:id", stub)
 
-		authorized.POST("/recommendations", nil)
-		authorized.GET("/recommendations/:job_id", nil)
+		authorized.POST("/recommendations", stub)
+		authorized.GET("/recommendations/:job_id", stub)
 	}
 
 	return r
