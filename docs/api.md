@@ -874,7 +874,139 @@ JWT不要。死活監視・ALBヘルスチェック用。
 
 ---
 
-## 11. 改訂履歴
+## 12. バックエンド実装設計
+### 12.1 技術スタック
+
+| 項目 | 採用 |
+|------|------|
+| 言語 | Go 1.22+ |
+| HTTPフレームワーク | [gin](https://github.com/gin-gonic/gin)|
+| DBドライバ | [GORM](https://gorm.io/)（ORM・マイグレーション機能込み） |
+| JWT検証 | [lestrrat-go/jwx](https://github.com/lestrrat-go/jwx)（Cognito JWKs対応） |
+| 設定管理 | 環境変数 + [godotenv](https://github.com/joho/godotenv)（ローカル開発用） |
+| ロガー | [slog](https://pkg.go.dev/log/slog)（Go 1.21標準） |
+| DBマイグレーション | [golang-migrate](https://github.com/golang-migrate/migrate) |
+
+---
+
+### 12.2 ディレクトリ構成
+```
+backend/
+├── cmd/
+│   └── api/
+│       └── main.go
+│
+├── internal/
+│   ├── config/
+│   │   └── config.go
+│   │
+│   ├── handler/
+│   │   ├── router.go
+│   │   ├── me.go
+│   │   ├── inventory.go
+│   │   ├── category.go
+│   │   ├── recipe.go
+│   │   ├── meal_plan.go
+│   │   ├── recommendation.go
+│   │   └── health.go
+│   │
+│   ├── middleware/
+│   │   ├── auth.go
+│   │   ├── cors.go
+│   │   ├── logger.go
+│   │   └── ratelimit.go
+│   │
+│   ├── service/
+│   │   ├── user.go
+│   │   ├── inventory.go
+│   │   ├── category.go
+│   │   ├── recipe.go
+│   │   ├── meal_plan.go
+│   │   └── recommendation.go
+│   │
+│   ├── repository/
+│   │   ├── user.go
+│   │   ├── inventory.go
+│   │   ├── category.go
+│   │   ├── recipe.go
+│   │   ├── meal_plan.go
+│   │   └── recommendation.go
+│   │
+│   ├── model/
+│   │   ├── user.go
+│   │   ├── inventory.go
+│   │   ├── category.go
+│   │   ├── recipe.go
+│   │   ├── meal_plan.go
+│   │   └── recommendation.go
+│   │
+│   ├── cognito/
+│   │   └── verifier.go
+│   │
+│   └── bedrock/
+│       └── client.go
+│
+├── db/
+│   └── migrations/
+│       ├── 000001_create_users.up.sql
+│       ├── 000001_create_users.down.sql
+│       ├── 000002_create_categories.up.sql
+│       ├── 000002_create_categories.down.sql
+│       └── ...
+│
+├── .env.example
+├── go.mod
+├── go.sum
+```
+
+---
+
+### 12.3 レイヤー責務
+
+| レイヤー | 責務 | 持たないもの |
+|---------|------|------------|
+| `handler` | リクエスト/レスポンスの変換・バリデーション・HTTPステータス決定 | ビジネスロジック・SQL |
+| `service` | ビジネスロジック（JITプロビジョニング・認可チェック等） | HTTP知識・SQL |
+| `repository` | SQL発行・DBとのやり取り | ビジネスロジック |
+| `model` | 構造体定義（DB行・リクエスト・レスポンス） | メソッド・ロジック |
+| `middleware` | 横断的関心事（認証・ログ・CORS・レート制限） | ビジネスロジック |
+| `cognito` | JWT検証・JWKsキャッシュ管理 | HTTP routing |
+| `bedrock` | Bedrock API呼び出しのラッパー | レシピのビジネスロジック |
+
+---
+
+### 12.4 依存関係
+```
+main.go
+└─ handler（router）
+├─ middleware（auth / cors / logger / ratelimit）
+└─ service
+├─ repository（DB）
+├─ cognito（JWT検証）
+└─ bedrock（LLM）
+```
+
+依存は上から下方向のみ。`repository` が `service` を参照するような逆方向の依存は禁止。
+
+---
+
+### 12.5 環境変数一覧
+
+| 変数名 | 説明 | 例 |
+|--------|------|-----|
+| `PORT` | APIサーバのListenポート | `8080` |
+| `DB_DSN` | MySQL接続文字列（Secrets Managerから取得） | `user:pass@tcp(host:3306)/dbname?parseTime=true` |
+| `COGNITO_REGION` | CognitoのAWSリージョン | `ap-northeast-1` |
+| `COGNITO_USER_POOL_ID` | User Pool ID | `ap-northeast-1_XXXXXXXXX` |
+| `COGNITO_CLIENT_ID` | アプリクライアントID | `xxxxxxxxxxxxxxxxxxxxxx` |
+| `BEDROCK_REGION` | BedrockのAWSリージョン | `ap-northeast-1` |
+| `BEDROCK_MODEL_ID` | 使用するモデルID | `anthropic.claude-3-5-sonnet-20241022-v2:0` |
+| `ALLOWED_ORIGINS` | CORS許可オリジン（カンマ区切り） | `https://example.vercel.app,http://localhost:3000` |
+| `ENV` | 実行環境 | `production` / `development` |
+
+---
+
+## 13. 改訂履歴
 
 | 版数 | 日付 | 内容 |
 |------|------|------|
