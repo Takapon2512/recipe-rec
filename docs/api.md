@@ -155,6 +155,7 @@ Access-Control-Max-Age: 86400
 
 ### 2.2 PATCH /api/me
 プロフィール更新。
+リクエストbodyに `display_name` がない場合やnullの場合は、削除扱いとする。
 
 #### Request
 ```json

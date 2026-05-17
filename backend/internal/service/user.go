@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Takapon2512/recipe-recommend/backend/internal/cognito"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/model"
@@ -51,4 +52,29 @@ func (s *UserService) GetOrCreate(claims *cognito.Claims) (*model.User, error) {
 	}
 
 	return newUser, nil
+}
+
+// UpdateDisplayName は display_name を更新する。
+func (s *UserService) UpdateDisplayName(user *model.User, displayName *string) (*model.User, error) {
+	if err := s.repo.Update(user, map[string]any{
+		"display_name": displayName,
+	}); err != nil {
+		return nil, fmt.Errorf("プロフィール更新失敗: %w", err)
+	}
+	user.DisplayName = displayName
+	user.UpdatedAt = time.Now().UTC()
+	return user, nil
+}
+
+// FindByCognitoSub は cognito_sub でユーザーを検索する。
+func (s *UserService) FindByCognitoSub(sub string) (*model.User, error) {
+	return s.repo.FindByCognitoSub(sub)
+}
+
+// Delete はユーザーを論理削除する。
+func (s *UserService) Delete(user *model.User) error {
+	if err := s.repo.SoftDelete(user); err != nil {
+		return fmt.Errorf("ユーザー削除失敗: %w", err)
+	}
+	return nil
 }
