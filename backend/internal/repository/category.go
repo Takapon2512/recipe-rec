@@ -7,19 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// 許容する type 値
-var validCategoryTypes = map[string]struct{}{
-	"food":      {},
-	"seasoning": {},
-	"daily":     {},
-}
-
-// IsValidCategoryType は type クエリパラメータの値を検証する。
-func IsValidCategoryType(t string) bool {
-	_, ok := validCategoryTypes[t]
-	return ok
-}
-
 type CategoryRepository struct {
 	db *gorm.DB
 }

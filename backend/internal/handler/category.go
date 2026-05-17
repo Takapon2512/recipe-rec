@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Takapon2512/recipe-recommend/backend/internal/repository"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -22,7 +21,7 @@ func (h *CategoryHandler) List(c *gin.Context) {
 	typeFilter := c.Query("type")
 
 	// type クエリパラメータが指定された場合はバリデーション
-	if typeFilter != "" && !repository.IsValidCategoryType(typeFilter) {
+	if typeFilter != "" && !service.IsValidCategoryType(typeFilter) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": gin.H{
 				"code":    "INVALID_QUERY",
