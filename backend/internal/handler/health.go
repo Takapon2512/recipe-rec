@@ -8,22 +8,21 @@ import (
 )
 
 type HealthResponse struct {
-	Status  string    `json:"status"`
-	Version int       `json:"id"`
-	Time    time.Time `json:"time"`
+	Status    string    `json:"status"`
+	Version   int       `json:"version"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 func NewHealthHandler() gin.HandlerFunc {
-	now := time.Now()
 
 	return func(c *gin.Context) {
 		c.JSON(
 			http.StatusOK,
 			gin.H{
 				"data": HealthResponse{
-					Status:  "OK",
-					Version: 1,
-					Time:    now,
+					Status:    "OK",
+					Version:   1,
+					Timestamp: time.Now(),
 				},
 			},
 		)

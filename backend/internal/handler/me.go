@@ -53,6 +53,8 @@ func (h *MeHandler) Get(c *gin.Context) {
 				Email:       user.Email,
 				DisplayName: user.DisplayName,
 				Provider:    user.Provider,
+				CreatedAt:   user.CreatedAt,
+				UpdatedAt:   user.UpdatedAt,
 			},
 		},
 	)
