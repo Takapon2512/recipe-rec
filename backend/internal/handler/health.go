@@ -9,7 +9,7 @@ import (
 
 type HealthResponse struct {
 	Status    string    `json:"status"`
-	Version   int       `json:"version"`
+	Version   string    `json:"version"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
@@ -20,8 +20,8 @@ func NewHealthHandler() gin.HandlerFunc {
 			http.StatusOK,
 			gin.H{
 				"data": HealthResponse{
-					Status:    "OK",
-					Version:   1,
+					Status:    "ok",
+					Version:   "1.0.0",
 					Timestamp: time.Now(),
 				},
 			},
