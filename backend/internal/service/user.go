@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Takapon2512/recipe-recommend/backend/internal/cognito"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/model"
@@ -60,6 +61,8 @@ func (s *UserService) UpdateDisplayName(user *model.User, displayName *string) (
 	}); err != nil {
 		return nil, fmt.Errorf("プロフィール更新失敗: %w", err)
 	}
+	user.DisplayName = displayName
+	user.UpdatedAt = time.Now()
 	return user, nil
 }
 

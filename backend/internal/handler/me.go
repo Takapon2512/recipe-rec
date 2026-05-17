@@ -7,12 +7,14 @@ import (
 	"github.com/Takapon2512/recipe-recommend/backend/internal/cognito"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/middleware"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/model"
+	"github.com/Takapon2512/recipe-recommend/backend/internal/repository"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type MeHandler struct {
-	userService *service.UserService
+	userService    *service.UserService
+	userRepository *repository.UserRepository
 }
 
 type PatchMeRequest struct {
@@ -45,18 +47,17 @@ type MeResponse struct {
 
 // Getはユーザー情報取得（もしくは新規作成）
 func (h *MeHandler) Get(c *gin.Context) {
-	claims, user, ok := resolveUser(c, h.userService)
+	_, user, ok := resolveUserWithJIT(c, h.userService)
 	if !ok {
 		return
 	}
-	_ = claims
 
 	c.JSON(http.StatusOK, gin.H{"data": toMeResponse(user)})
 }
 
 // PATCH /api/me
 func (h *MeHandler) Patch(c *gin.Context) {
-	_, user, ok := resolveUser(c, h.userService)
+	_, user, ok := resolveExistingUser(c, h.userRepository)
 	if !ok {
 		return
 	}
@@ -85,7 +86,7 @@ func (h *MeHandler) Patch(c *gin.Context) {
 
 // DELETE /api/me
 func (h *MeHandler) Delete(c *gin.Context) {
-	_, user, ok := resolveUser(c, h.userService)
+	_, user, ok := resolveExistingUser(c, h.userRepository)
 	if !ok {
 		return
 	}
@@ -100,8 +101,8 @@ func (h *MeHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// resolveUser は claims の取得と GetOrCreate を共通化するヘルパー。
-func resolveUser(c *gin.Context, svc *service.UserService) (*cognito.Claims, *model.User, bool) {
+// resolveUserWithJIT は claims の取得と GetOrCreate を共通化するヘルパー。
+func resolveUserWithJIT(c *gin.Context, svc *service.UserService) (*cognito.Claims, *model.User, bool) {
 	claims, ok := c.MustGet(middleware.ContextKeyClaims).(*cognito.Claims)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -112,6 +113,34 @@ func resolveUser(c *gin.Context, svc *service.UserService) (*cognito.Claims, *mo
 
 	user, err := svc.GetOrCreate(claims)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{"code": "INTERNAL_ERROR", "message": "ユーザー取得失敗"},
+		})
+		return nil, nil, false
+	}
+
+	return claims, user, true
+}
+
+// PATCH・DELETE 専用 — Find のみ、見つからなければ 404
+func resolveExistingUser(c *gin.Context, repo *repository.UserRepository) (*cognito.Claims, *model.User, bool) {
+	claims, ok := c.MustGet(middleware.ContextKeyClaims).(*cognito.Claims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{"code": "INTERNAL_ERROR", "message": "claims取得失敗"},
+		})
+		return nil, nil, false
+	}
+
+	user, err := repo.FindByCognitoSub(claims.Sub)
+	if err != nil {
+		if repository.IsNotFound(err) {
+			// 論理削除済み or 未登録（通常ありえないが念のため）
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": gin.H{"code": "NOT_FOUND", "message": "ユーザーが見つかりません"},
+			})
+			return nil, nil, false
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{"code": "INTERNAL_ERROR", "message": "ユーザー取得失敗"},
 		})
