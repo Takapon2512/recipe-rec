@@ -32,6 +32,18 @@ func (r *UserRepository) Create(user *model.User) error {
 	return r.db.Create(user).Error
 }
 
+// Update は指定フィールドのみ更新する。
+// map を使うことでゼロ値（空文字・nil）も正しく更新できる。
+func (r *UserRepository) Update(user *model.User, fields map[string]any) error {
+	return r.db.Model(user).Updates(fields).Error
+}
+
+// SoftDelete はユーザーを論理削除する。
+// gorm.DeletedAt により deleted_at に現在時刻がセットされる。
+func (r *UserRepository) SoftDelete(user *model.User) error {
+	return r.db.Delete(user).Error
+}
+
 // IsNotFound は gorm.ErrRecordNotFound かどうかを判定する。
 func IsNotFound(err error) bool {
 	return errors.Is(err, gorm.ErrRecordNotFound)
