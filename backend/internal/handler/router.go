@@ -37,11 +37,15 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 		userService := service.NewUserService(userRepo)
 		meHandler := NewMeHandler(userService)
 
+		categoryRepo := repository.NewCategoryRepository(db)
+		categorySvc := service.NewCategoryService(categoryRepo)
+		categoryHandler := NewCategoryHandler(categorySvc)
+
 		authorized.GET("/me", meHandler.Get)
 		authorized.PATCH("/me", meHandler.Patch)
 		authorized.DELETE("/me", meHandler.Delete)
 
-		authorized.GET("/categories", stub)
+		authorized.GET("/categories", categoryHandler.List)
 
 		authorized.GET("/inventory", stub)
 		authorized.POST("/inventory", stub)
