@@ -13,8 +13,7 @@ import (
 )
 
 type MeHandler struct {
-	userService    *service.UserService
-	userRepository *repository.UserRepository
+	userService *service.UserService
 }
 
 type PatchMeRequest struct {
@@ -57,7 +56,7 @@ func (h *MeHandler) Get(c *gin.Context) {
 
 // PATCH /api/me
 func (h *MeHandler) Patch(c *gin.Context) {
-	_, user, ok := resolveExistingUser(c, h.userRepository)
+	_, user, ok := resolveExistingUser(c, h.userService)
 	if !ok {
 		return
 	}
@@ -86,7 +85,7 @@ func (h *MeHandler) Patch(c *gin.Context) {
 
 // DELETE /api/me
 func (h *MeHandler) Delete(c *gin.Context) {
-	_, user, ok := resolveExistingUser(c, h.userRepository)
+	_, user, ok := resolveExistingUser(c, h.userService)
 	if !ok {
 		return
 	}
@@ -123,7 +122,7 @@ func resolveUserWithJIT(c *gin.Context, svc *service.UserService) (*cognito.Clai
 }
 
 // PATCH・DELETE 専用 — Find のみ、見つからなければ 404
-func resolveExistingUser(c *gin.Context, repo *repository.UserRepository) (*cognito.Claims, *model.User, bool) {
+func resolveExistingUser(c *gin.Context, svc *service.UserService) (*cognito.Claims, *model.User, bool) {
 	claims, ok := c.MustGet(middleware.ContextKeyClaims).(*cognito.Claims)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -132,7 +131,7 @@ func resolveExistingUser(c *gin.Context, repo *repository.UserRepository) (*cogn
 		return nil, nil, false
 	}
 
-	user, err := repo.FindByCognitoSub(claims.Sub)
+	user, err := svc.FindByCognitoSub(claims.Sub)
 	if err != nil {
 		if repository.IsNotFound(err) {
 			// 論理削除済み or 未登録（通常ありえないが念のため）

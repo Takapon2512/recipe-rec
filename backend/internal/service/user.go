@@ -62,8 +62,13 @@ func (s *UserService) UpdateDisplayName(user *model.User, displayName *string) (
 		return nil, fmt.Errorf("プロフィール更新失敗: %w", err)
 	}
 	user.DisplayName = displayName
-	user.UpdatedAt = time.Now()
+	user.UpdatedAt = time.Now().UTC()
 	return user, nil
+}
+
+// FindByCognitoSub は cognito_sub でユーザーを検索する。
+func (s *UserService) FindByCognitoSub(sub string) (*model.User, error) {
+	return s.repo.FindByCognitoSub(sub)
 }
 
 // Delete はユーザーを論理削除する。
