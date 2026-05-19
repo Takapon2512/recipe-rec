@@ -15,8 +15,8 @@ type InventoryHandler struct {
 	userService      *service.UserService
 }
 
-func NewInventoryHandler(inventoryService *service.InventoryService) *InventoryHandler {
-	return &InventoryHandler{inventoryService: inventoryService}
+func NewInventoryHandler(inventoryService *service.InventoryService, userService *service.UserService) *InventoryHandler {
+	return &InventoryHandler{inventoryService: inventoryService, userService: userService}
 }
 
 // List は GET /api/inventory のハンドラ。

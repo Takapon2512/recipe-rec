@@ -43,7 +43,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 
 		inventoryRepo := repository.NewInventoryRepository(db)
 		inventoryService := service.NewInventoryService(inventoryRepo)
-		inventoryHandler := NewInventoryHandler(inventoryService)
+		inventoryHandler := NewInventoryHandler(inventoryService, userService)
 
 		authorized.GET("/me", meHandler.Get)
 		authorized.PATCH("/me", meHandler.Patch)
