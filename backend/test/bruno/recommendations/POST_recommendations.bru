@@ -1,0 +1,25 @@
+meta {
+  name: レシピ提案ジョブ登録
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/recommendations
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "filters": {
+      "max_cooking_time_min": 30,
+      "genre": "japanese",
+      "prefer_expiring": true
+    },
+    "count": 3
+  }
+}

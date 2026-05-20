@@ -1,0 +1,14 @@
+meta {
+  name: レシピ削除
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/recipes/1
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

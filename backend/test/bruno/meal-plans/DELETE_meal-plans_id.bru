@@ -1,0 +1,14 @@
+meta {
+  name: 献立削除
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/meal-plans/1
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

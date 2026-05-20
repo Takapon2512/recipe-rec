@@ -1,0 +1,14 @@
+meta {
+  name: 在庫サマリー取得
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/inventory/summary
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

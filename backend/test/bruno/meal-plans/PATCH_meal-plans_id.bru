@@ -1,0 +1,22 @@
+meta {
+  name: 献立更新
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/meal-plans/1
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "dish_name": "親子丼",
+    "meal_type": "dinner",
+    "memo": "ご飯多めで"
+  }
+}

@@ -1,0 +1,20 @@
+meta {
+  name: 在庫更新
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/inventory/1
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "quantity": 200
+  }
+}

@@ -1,0 +1,23 @@
+meta {
+  name: 献立コピー
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/meal-plans/copy
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "from_date": "2026-05-13",
+    "to_date": "2026-05-19",
+    "target_start_date": "2026-05-20",
+    "overwrite": false
+  }
+}

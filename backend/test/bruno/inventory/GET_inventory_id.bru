@@ -1,0 +1,14 @@
+meta {
+  name: 在庫詳細取得
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/inventory/1
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

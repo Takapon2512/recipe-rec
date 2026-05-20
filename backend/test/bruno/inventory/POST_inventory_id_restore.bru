@@ -1,0 +1,14 @@
+meta {
+  name: 在庫復元（削除取り消し）
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/inventory/1/restore
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

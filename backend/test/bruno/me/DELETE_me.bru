@@ -1,0 +1,14 @@
+meta {
+  name: アカウント削除（退会）
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/api/me
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

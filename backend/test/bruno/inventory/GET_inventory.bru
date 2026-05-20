@@ -1,0 +1,26 @@
+meta {
+  name: 在庫一覧取得
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/inventory?page=1&per_page=20&q=鶏&storage_location=fridge&sort=expires_at&order=asc
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  per_page: 20
+  q: 鶏
+  storage_location: fridge
+  sort: expires_at
+  order: asc
+  ~category_id: 1
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

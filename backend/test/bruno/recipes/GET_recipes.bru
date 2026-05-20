@@ -1,0 +1,22 @@
+meta {
+  name: レシピ一覧取得
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/recipes
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+query {
+  page: 1
+  per_page: 20
+  # q: 照り焼き
+  # genre: japanese
+  # source: manual
+}
