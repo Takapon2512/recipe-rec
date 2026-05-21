@@ -87,3 +87,17 @@ type Pagination struct {
 	Total      int64 `json:"total"`
 	TotalPages int   `json:"total_pages"`
 }
+
+// UpdateInventoryItemRequest は PATCH /api/inventory/{id} のリクエストボディ。
+// 送信されたフィールドのみ更新する部分更新（omitempty は使わず *型 でゼロ値と未送信を区別する）。
+type UpdateInventoryItemRequest struct {
+	Name            *string  `json:"name"             binding:"omitempty,min=1,max=100"`
+	CategoryID      *int     `json:"category_id"` // null を明示的に送るとカテゴリ解除
+	ClearCategoryID bool     `json:"-"`           // "category_id": null が明示送信された場合に true をセット
+	Quantity        *float64 `json:"quantity"         binding:"omitempty,gt=0"`
+	Unit            *string  `json:"unit"             binding:"omitempty"`
+	PurchasedAt     *string  `json:"purchased_at"     binding:"omitempty,datetime=2006-01-02"`
+	ExpiresAt       *string  `json:"expires_at"       binding:"omitempty,datetime=2006-01-02"`
+	StorageLocation *string  `json:"storage_location" binding:"omitempty,oneof=fridge freezer pantry"`
+	Memo            *string  `json:"memo"             binding:"omitempty,max=500"`
+}

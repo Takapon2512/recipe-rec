@@ -14,6 +14,9 @@ import (
 // ErrCategoryNotFound は指定 category_id が存在しない場合のエラー。
 var ErrCategoryNotFound = errors.New("category not found")
 
+// ErrNotFound はリソースが存在しない・削除済み・他ユーザー所有の場合のエラー。
+var ErrNotFound = errors.New("not found")
+
 // ValidationError はリクエスト値起因のバリデーションエラー。
 // ハンドラ側で errors.As により 400 と 500 を区別する。
 type ValidationError struct{ msg string }
@@ -149,6 +152,135 @@ func (s *InventoryService) Create(userID uint64, req model.CreateInventoryReques
 
 	return item, nil
 }
+
+// GetInventoryItem は在庫を1件取得して返す。
+// レスポンス整形（ToResponse）はハンドラー側で行う。
+// 存在しない・論理削除済み・他ユーザーのリソースの場合は ErrNotFound を返す。
+func (s *InventoryService) GetInventoryItem(userID, id uint64) (*model.InventoryItem, error) {
+	item, err := s.repo.FindByIDAndUserID(id, userID)
+	if err != nil {
+		return nil, translateNotFound(err)
+	}
+	return item, nil
+}
+
+// UpdateInventoryItem は在庫を部分更新して更新後のレコードを返す。
+// レスポンス整形（ToResponse）はハンドラー側で行う。
+// req の非 nil フィールドのみ上書きする（ゼロ値との区別のためポインタ型を利用）。
+//
+// category_id の扱い:
+//   - req.CategoryID != nil          → 存在確認のうえカテゴリ変更
+//   - req.ClearCategoryID == true    → nil に更新（未分類化）
+//   - どちらでもない                  → 変更なし
+func (s *InventoryService) UpdateInventoryItem(userID, id uint64, req *model.UpdateInventoryItemRequest) (*model.InventoryItem, error) {
+	// 現在のレコードを取得（認可チェック兼用）
+	item, err := s.repo.FindByIDAndUserID(id, userID)
+	if err != nil {
+		return nil, translateNotFound(err)
+	}
+
+	if req.Name != nil {
+		name := strings.TrimSpace(*req.Name)
+		if name == "" {
+			return nil, NewValidationError("name must not be blank")
+		}
+		item.Name = name
+	}
+
+	if req.CategoryID != nil {
+		exists, err := s.repo.CategoryExists(*req.CategoryID)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, ErrCategoryNotFound
+		}
+		item.CategoryID = req.CategoryID
+	}
+
+	if req.ClearCategoryID {
+		item.CategoryID = nil
+	}
+
+	if req.Quantity != nil {
+		if *req.Quantity <= 0 {
+			return nil, NewValidationError("quantity must be greater than 0")
+		}
+		item.Quantity = *req.Quantity
+	}
+
+	if req.Unit != nil {
+		if !model.ValidUnits[*req.Unit] {
+			return nil, NewValidationError(fmt.Sprintf("invalid unit: %s", *req.Unit))
+		}
+		item.Unit = *req.Unit
+	}
+
+	if req.PurchasedAt != nil {
+		t, err := parseDate(req.PurchasedAt)
+		if err != nil {
+			return nil, NewValidationError(fmt.Sprintf("invalid purchased_at: %s", err))
+		}
+		item.PurchasedAt = t
+	}
+
+	if req.ExpiresAt != nil {
+		t, err := parseDate(req.ExpiresAt)
+		if err != nil {
+			return nil, NewValidationError(fmt.Sprintf("invalid expires_at: %s", err))
+		}
+		item.ExpiresAt = t
+	}
+
+	if req.StorageLocation != nil {
+		loc := strings.TrimSpace(*req.StorageLocation)
+		if loc != "" && !model.ValidStorageLocations[loc] {
+			return nil, NewValidationError(fmt.Sprintf("invalid storage_location: %s", loc))
+		}
+		if loc == "" {
+			item.StorageLocation = nil
+		} else {
+			item.StorageLocation = &loc
+		}
+	}
+
+	if req.Memo != nil {
+		trimmed := strings.TrimSpace(*req.Memo)
+		if trimmed == "" {
+			item.Memo = nil
+		} else {
+			item.Memo = &trimmed
+		}
+	}
+
+	if err := s.repo.Update(item); err != nil {
+		return nil, err
+	}
+
+	// Category を再 Preload（category_id 変更後の最新状態を返すため）
+	updated, err := s.repo.FindByIDAndUserID(id, userID)
+	if err != nil {
+		return nil, translateNotFound(err)
+	}
+
+	return updated, nil
+}
+
+// DeleteInventoryItem は在庫を論理削除する。
+// 存在しない・論理削除済み・他ユーザーのリソースの場合は repository.ErrNotFound を返す。
+func (s *InventoryService) DeleteInventoryItem(userID, id uint64) error {
+	return s.repo.SoftDelete(userID, id)
+}
+
+// translateNotFound は repository.ErrNotFound を service.ErrNotFound に変換する。
+// それ以外のエラーはそのまま返す。
+func translateNotFound(err error) error {
+	if errors.Is(err, repository.ErrNotFound) {
+		return ErrNotFound
+	}
+	return err
+}
+
 
 // parseDate は "YYYY-MM-DD" 文字列を *time.Time に変換する。nil または空文字の場合は nil を返す。
 func parseDate(s *string) (*time.Time, error) {

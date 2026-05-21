@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Takapon2512/recipe-recommend/backend/internal/model"
 	"gorm.io/gorm"
@@ -107,7 +109,7 @@ func (r *InventoryRepository) Create(item *model.InventoryItem) error {
 }
 
 // FindByIDAndUserID は指定 id かつ user_id が一致するレコードを返す。
-// 見つからない場合は gorm.ErrRecordNotFound。
+// 見つからない場合は ErrNotFound を返す。
 func (r *InventoryRepository) FindByIDAndUserID(id, userID uint64) (*model.InventoryItem, error) {
 	var item model.InventoryItem
 
@@ -115,6 +117,9 @@ func (r *InventoryRepository) FindByIDAndUserID(id, userID uint64) (*model.Inven
 		Where("id = ? AND user_id = ?", id, userID).
 		First(&item).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return &item, nil
@@ -130,4 +135,40 @@ func (r *InventoryRepository) CategoryExists(categoryID int) (bool, error) {
 		return false, fmt.Errorf("category 存在確認失敗: %w", err)
 	}
 	return count > 0, nil
+}
+
+// Update は渡された InventoryItem の内容でDBを更新する。
+// service 層で非 nil フィールドのみ上書きした構造体を渡すこと。
+// Select("*") + Omit("created_at", "deleted_at") を使うことで、
+// category_id = NULL への更新（カテゴリ解除）も正しく反映される。
+// GORM のゼロ値スキップ問題を回避するための明示的な全カラム指定。
+func (r *InventoryRepository) Update(item *model.InventoryItem) error {
+	result := r.db.Model(item).Select("*").Omit("created_at", "deleted_at").Save(item)
+
+	if result.Error != nil {
+		return fmt.Errorf("inventory update 失敗: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("inventory update 失敗: レコードが見つかりません")
+	}
+
+	return nil
+}
+
+// SoftDelete は指定した id かつ user_id に紐づく在庫を論理削除する。
+// deleted_at に現在時刻をセットする。
+// 存在しない・既に削除済み・他ユーザーのリソースの場合は ErrNotFound を返す（設計書 §10 認可ルール）。
+func (r *InventoryRepository) SoftDelete(userID, id uint64) error {
+	result := r.db.Model(&model.InventoryItem{}).Where("id = ? AND user_id = ?", id, userID).Update("deleted_at", time.Now().UTC())
+
+	if result.Error != nil {
+		return fmt.Errorf("inventory delete 失敗: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("inventory delete 失敗: レコードが見つかりません")
+	}
+
+	return nil
 }
