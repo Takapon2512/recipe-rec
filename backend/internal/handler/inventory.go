@@ -34,7 +34,7 @@ func (h *InventoryHandler) List(c *gin.Context) {
 
 	// storage_location バリデーション
 	if params.StorageLocation != "" && !model.ValidStorageLocations[params.StorageLocation] {
-		respondValidationError(c, "storage_location must be one of: fridge, freezer, pantry")
+		respondValidationError(c, "保管場所 は次のいずれかを指定してください: fridge, freezer, pantry")
 		return
 	}
 
