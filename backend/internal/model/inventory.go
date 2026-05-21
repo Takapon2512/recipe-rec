@@ -10,7 +10,7 @@ import (
 type InventoryItem struct {
 	ID              uint64         `gorm:"primaryKey;autoIncrement"             json:"id"`
 	UserID          uint64         `gorm:"not null;index"                       json:"-"`
-	CategoryID      *uint          `gorm:"default:null"                         json:"-"`
+	CategoryID      *int           `gorm:"default:null"                         json:"category_id"`
 	Category        *Category      `gorm:"foreignKey:CategoryID"                json:"category"`
 	Name            string         `gorm:"size:100;not null"                    json:"name"`
 	Quantity        float64        `gorm:"type:decimal(10,2);not null"          json:"quantity"`
@@ -61,13 +61,13 @@ var ValidStorageLocations = map[string]bool{
 // CreateInventoryRequest は POST /api/inventory のリクエスト。
 type CreateInventoryRequest struct {
 	Name            string  `json:"name"             binding:"required,min=1,max=100"`
-	CategoryID      *uint   `json:"category_id"`
+	CategoryID      *int    `json:"category_id"`
 	Quantity        float64 `json:"quantity"         binding:"required,gt=0"`
 	Unit            string  `json:"unit"             binding:"required"`
 	PurchasedAt     *string `json:"purchased_at"`
 	ExpiresAt       *string `json:"expires_at"`
 	StorageLocation *string `json:"storage_location"`
-	Memo            *string `json:"memo"`
+	Memo            *string `json:"memo" binding:"omitempty,max=500"`
 }
 
 // ListInventoryParams は GET /api/inventory のクエリパラメータ。

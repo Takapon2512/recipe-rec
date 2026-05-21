@@ -28,7 +28,7 @@ func (h *InventoryHandler) List(c *gin.Context) {
 
 	var params model.ListInventoryParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		respondValidationError(c, err.Error())
+		respondValidationError(c, bindingErrorMessage(err))
 		return
 	}
 
@@ -66,24 +66,28 @@ func (h *InventoryHandler) Create(c *gin.Context) {
 
 	var req model.CreateInventoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondValidationError(c, err.Error())
+		respondValidationError(c, bindingErrorMessage(err))
 		return
 	}
 
 	item, err := h.inventoryService.Create(user.ID, req)
 	if err != nil {
-		if errors.Is(err, service.ErrCategoryNotFound) {
+		switch {
+		case errors.Is(err, service.ErrCategoryNotFound):
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": gin.H{
 					"code":    "NOT_FOUND",
 					"message": "specified category_id does not exist",
 				},
 			})
-			return
+		case errors.Is(err, service.ErrValidation):
+			slog.Warn("inventory create validation failed", "error", err)
+			respondValidationError(c, err.Error())
+		default:
+			// DB エラー等は 500
+			slog.Error("inventory create failed", "error", err)
+			respondInternalError(c)
 		}
-		// unit / storage_location / date のバリデーションエラー
-		slog.Warn("inventory create validation failed", "error", err)
-		respondValidationError(c, err.Error())
 		return
 	}
 

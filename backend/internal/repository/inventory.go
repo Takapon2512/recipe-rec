@@ -51,19 +51,8 @@ func (r *InventoryRepository) List(userID uint64, params model.ListInventoryPara
 	q = applySort(q, params.Sort)
 
 	// --- ページネーション ---
-	page := params.Page
-	if page < 1 {
-		page = 1
-	}
-	perPage := params.PerPage
-	if perPage < 1 {
-		perPage = 20
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
-	offset := (page - 1) * perPage
-	q = q.Limit(perPage).Offset(offset)
+	offset := (params.Page - 1) * params.PerPage
+	q = q.Limit(params.PerPage).Offset(offset)
 
 	var items []model.InventoryItem
 	if err := q.Find(&items).Error; err != nil {
@@ -132,7 +121,7 @@ func (r *InventoryRepository) FindByIDAndUserID(id, userID uint64) (*model.Inven
 }
 
 // CategoryExists は category_id が categories テーブルに存在するか確認する。
-func (r *InventoryRepository) CategoryExists(categoryID uint) (bool, error) {
+func (r *InventoryRepository) CategoryExists(categoryID int) (bool, error) {
 	var count int64
 	err := r.db.Model(&model.Category{}).
 		Where("id = ?", categoryID).

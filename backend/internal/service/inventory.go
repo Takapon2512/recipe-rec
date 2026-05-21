@@ -14,6 +14,11 @@ import (
 // ErrCategoryNotFound は指定 category_id が存在しない場合のエラー。
 var ErrCategoryNotFound = errors.New("category not found")
 
+
+// ErrValidation はリクエスト値起因のバリデーションエラー。
+// ハンドラ側で 400 と 500 を区別するために使う。
+var ErrValidation = errors.New("validation error")
+
 type InventoryService struct {
 	repo *repository.InventoryRepository
 }
@@ -30,7 +35,6 @@ type ListResult struct {
 
 // List は在庫一覧を取得してページネーションメタを計算して返す。
 func (s *InventoryService) List(userID uint64, params model.ListInventoryParams) (*ListResult, error) {
-	// ページ・件数の正規化はリポジトリ側で行うが、ここでも初期化しておく
 	if params.Page < 1 {
 		params.Page = 1
 	}
@@ -71,7 +75,7 @@ func (s *InventoryService) List(userID uint64, params model.ListInventoryParams)
 func (s *InventoryService) Create(userID uint64, req model.CreateInventoryRequest) (*model.InventoryItem, error) {
 	// unit バリデーション
 	if !model.ValidUnits[req.Unit] {
-		return nil, fmt.Errorf("invalid unit: %s", req.Unit)
+		return nil, fmt.Errorf("%w: invalid unit: %s", ErrValidation, req.Unit)
 	}
 
 	// storage_location バリデーション
@@ -89,6 +93,9 @@ func (s *InventoryService) Create(userID uint64, req model.CreateInventoryReques
 
 	// name の trim
 	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		return nil, fmt.Errorf("name must not be blank")
+	}
 
 	// memo の trim & 空文字 → nil
 	if req.Memo != nil {
