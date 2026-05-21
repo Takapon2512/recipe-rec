@@ -1,0 +1,24 @@
+meta {
+  name: 献立登録
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/meal-plans
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "plan_date": "2026-05-20",
+    "meal_type": "dinner",
+    "dish_name": "鶏の照り焼き",
+    "recipe_id": 1,
+    "memo": ""
+  }
+}

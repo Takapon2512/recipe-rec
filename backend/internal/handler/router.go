@@ -41,14 +41,18 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 		categorySvc := service.NewCategoryService(categoryRepo)
 		categoryHandler := NewCategoryHandler(categorySvc)
 
+		inventoryRepo := repository.NewInventoryRepository(db)
+		inventoryService := service.NewInventoryService(inventoryRepo)
+		inventoryHandler := NewInventoryHandler(inventoryService, userService)
+
 		authorized.GET("/me", meHandler.Get)
 		authorized.PATCH("/me", meHandler.Patch)
 		authorized.DELETE("/me", meHandler.Delete)
 
 		authorized.GET("/categories", categoryHandler.List)
 
-		authorized.GET("/inventory", stub)
-		authorized.POST("/inventory", stub)
+		authorized.GET("/inventory", inventoryHandler.List)
+		authorized.POST("/inventory", inventoryHandler.Create)
 		authorized.GET("/inventory/expiring", stub)
 		authorized.GET("/inventory/suggest", stub)
 		authorized.GET("/inventory/summary", stub)

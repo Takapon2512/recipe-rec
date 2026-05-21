@@ -1,0 +1,18 @@
+meta {
+  name: 期限切れ間近の在庫一覧
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/inventory/expiring
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+query {
+  within_days: 3
+}

@@ -1,0 +1,20 @@
+meta {
+  name: 献立一覧取得
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/meal-plans
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+query {
+  from: 2026-05-20
+  to: 2026-05-26
+  # meal_type: dinner
+}

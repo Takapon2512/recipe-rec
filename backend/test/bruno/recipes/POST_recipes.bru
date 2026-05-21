@@ -1,0 +1,33 @@
+meta {
+  name: レシピ登録
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/recipes
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "鶏の照り焼き",
+    "cooking_time_min": 25,
+    "genre": "japanese",
+    "source": "manual",
+    "ingredients": [
+      { "name": "鶏もも肉", "quantity": 300, "unit": "g" },
+      { "name": "醤油", "quantity": 30, "unit": "ml" },
+      { "name": "みりん", "quantity": 30, "unit": "ml" }
+    ],
+    "steps": [
+      { "step_no": 1, "description": "鶏肉を一口大に切る", "duration_min": 3 },
+      { "step_no": 2, "description": "フライパンで皮目から焼く", "duration_min": 7 },
+      { "step_no": 3, "description": "調味料を加えて煮絡める", "duration_min": 5 }
+    ]
+  }
+}

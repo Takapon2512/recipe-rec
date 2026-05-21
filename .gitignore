@@ -1,2 +1,3 @@
 backend/migrate
 backend/tmp/
+.DS_Store

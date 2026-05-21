@@ -1,0 +1,14 @@
+meta {
+  name: レシピ提案結果取得（ポーリング用）
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/recommendations/rec_01HX9F8QZ7K3R2N
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

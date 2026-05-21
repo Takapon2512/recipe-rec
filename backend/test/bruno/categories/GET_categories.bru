@@ -1,0 +1,21 @@
+meta {
+  name: カテゴリ一覧取得
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/categories
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+query {
+  type: food
+  type: seasoning
+  type: daily
+}
+

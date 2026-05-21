@@ -1,0 +1,14 @@
+meta {
+  name: 在庫削除
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/inventory/1
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}

@@ -1,0 +1,27 @@
+meta {
+  name: 在庫追加
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/inventory
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "鶏もも肉",
+    "category_id": 2,
+    "quantity": 300,
+    "unit": "g",
+    "purchased_at": "2026-05-20",
+    "expires_at": "2026-05-23",
+    "storage_location": "fridge",
+    "memo": ""
+  }
+}

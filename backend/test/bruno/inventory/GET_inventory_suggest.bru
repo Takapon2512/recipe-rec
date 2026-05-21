@@ -1,0 +1,19 @@
+meta {
+  name: 商品名サジェスト
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/inventory/suggest
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+query {
+  q: 鶏
+  limit: 5
+}

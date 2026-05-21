@@ -1,0 +1,19 @@
+meta {
+  name: レシピ提案履歴一覧
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/recommendations/history
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+query {
+  page: 1
+  per_page: 20
+}
