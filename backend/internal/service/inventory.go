@@ -14,10 +14,13 @@ import (
 // ErrCategoryNotFound は指定 category_id が存在しない場合のエラー。
 var ErrCategoryNotFound = errors.New("category not found")
 
+// ValidationError はリクエスト値起因のバリデーションエラー。
+// ハンドラ側で errors.As により 400 と 500 を区別する。
+type ValidationError struct{ msg string }
 
-// ErrValidation はリクエスト値起因のバリデーションエラー。
-// ハンドラ側で 400 と 500 を区別するために使う。
-var ErrValidation = errors.New("validation error")
+func (e *ValidationError) Error() string { return e.msg }
+
+func NewValidationError(msg string) error { return &ValidationError{msg: msg} }
 
 type InventoryService struct {
 	repo *repository.InventoryRepository
@@ -75,14 +78,14 @@ func (s *InventoryService) List(userID uint64, params model.ListInventoryParams)
 func (s *InventoryService) Create(userID uint64, req model.CreateInventoryRequest) (*model.InventoryItem, error) {
 	// unit バリデーション
 	if !model.ValidUnits[req.Unit] {
-		return nil, fmt.Errorf("%w: invalid unit: %s", ErrValidation, req.Unit)
+		return nil, NewValidationError(fmt.Sprintf("invalid unit: %s", req.Unit))
 	}
 
 	// storage_location バリデーション
 	if req.StorageLocation != nil {
 		loc := strings.TrimSpace(*req.StorageLocation)
 		if loc != "" && !model.ValidStorageLocations[loc] {
-			return nil, fmt.Errorf("invalid storage_location: %s", loc)
+			return nil, NewValidationError(fmt.Sprintf("invalid storage_location: %s", loc))
 		}
 		if loc == "" {
 			req.StorageLocation = nil
@@ -94,7 +97,7 @@ func (s *InventoryService) Create(userID uint64, req model.CreateInventoryReques
 	// name の trim
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
-		return nil, fmt.Errorf("name must not be blank")
+		return nil, NewValidationError("name must not be blank")
 	}
 
 	// memo の trim & 空文字 → nil
@@ -121,11 +124,11 @@ func (s *InventoryService) Create(userID uint64, req model.CreateInventoryReques
 	// 日付パース
 	purchasedAt, err := parseDate(req.PurchasedAt)
 	if err != nil {
-		return nil, fmt.Errorf("invalid purchased_at: %w", err)
+		return nil, NewValidationError(fmt.Sprintf("invalid purchased_at: %s", err))
 	}
 	expiresAt, err := parseDate(req.ExpiresAt)
 	if err != nil {
-		return nil, fmt.Errorf("invalid expires_at: %w", err)
+		return nil, NewValidationError(fmt.Sprintf("invalid expires_at: %s", err))
 	}
 
 	item := &model.InventoryItem{

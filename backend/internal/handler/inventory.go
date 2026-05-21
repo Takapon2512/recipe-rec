@@ -72,6 +72,7 @@ func (h *InventoryHandler) Create(c *gin.Context) {
 
 	item, err := h.inventoryService.Create(user.ID, req)
 	if err != nil {
+		var ve *service.ValidationError
 		switch {
 		case errors.Is(err, service.ErrCategoryNotFound):
 			c.JSON(http.StatusNotFound, gin.H{
@@ -80,9 +81,9 @@ func (h *InventoryHandler) Create(c *gin.Context) {
 					"message": "specified category_id does not exist",
 				},
 			})
-		case errors.Is(err, service.ErrValidation):
+		case errors.As(err, &ve):
 			slog.Warn("inventory create validation failed", "error", err)
-			respondValidationError(c, err.Error())
+			respondValidationError(c, ve.Error())
 		default:
 			// DB エラー等は 500
 			slog.Error("inventory create failed", "error", err)
