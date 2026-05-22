@@ -269,7 +269,7 @@ func (s *InventoryService) UpdateInventoryItem(userID, id uint64, req *model.Upd
 // DeleteInventoryItem は在庫を論理削除する。
 // 存在しない・論理削除済み・他ユーザーのリソースの場合は repository.ErrNotFound を返す。
 func (s *InventoryService) DeleteInventoryItem(userID, id uint64) error {
-	return s.repo.SoftDelete(userID, id)
+	return translateNotFound(s.repo.SoftDelete(userID, id))
 }
 
 // translateNotFound は repository.ErrNotFound を service.ErrNotFound に変換する。
@@ -280,7 +280,6 @@ func translateNotFound(err error) error {
 	}
 	return err
 }
-
 
 // parseDate は "YYYY-MM-DD" 文字列を *time.Time に変換する。nil または空文字の場合は nil を返す。
 func parseDate(s *string) (*time.Time, error) {

@@ -150,7 +150,7 @@ func (r *InventoryRepository) Update(item *model.InventoryItem) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("inventory update 失敗: レコードが見つかりません")
+		return ErrNotFound
 	}
 
 	return nil
