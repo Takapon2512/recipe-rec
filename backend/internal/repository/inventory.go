@@ -167,7 +167,7 @@ func (r *InventoryRepository) SoftDelete(userID, id uint64) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("inventory delete 失敗: レコードが見つかりません")
+		return ErrNotFound
 	}
 
 	return nil
