@@ -245,6 +245,8 @@ func (h *InventoryHandler) Update(c *gin.Context) {
 		var ve *service.ValidationError
 		switch {
 		case errors.Is(err, service.ErrNotFound):
+			respondNotFound(c)
+		case errors.Is(err, service.ErrCategoryNotFound):
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": gin.H{
 					"code":    "NOT_FOUND",
