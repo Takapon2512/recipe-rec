@@ -254,7 +254,7 @@ func (s *InventoryService) UpdateInventoryItem(userID, id uint64, req *model.Upd
 	}
 
 	if err := s.repo.Update(item); err != nil {
-		return nil, err
+		return nil, translateNotFound(err)
 	}
 
 	// Category を再 Preload（category_id 変更後の最新状態を返すため）
@@ -267,7 +267,7 @@ func (s *InventoryService) UpdateInventoryItem(userID, id uint64, req *model.Upd
 }
 
 // DeleteInventoryItem は在庫を論理削除する。
-// 存在しない・論理削除済み・他ユーザーのリソースの場合は repository.ErrNotFound を返す。
+// 存在しない・論理削除済み・他ユーザーのリソースの場合は ErrNotFound を返す。
 func (s *InventoryService) DeleteInventoryItem(userID, id uint64) error {
 	return translateNotFound(s.repo.SoftDelete(userID, id))
 }
