@@ -172,3 +172,21 @@ func (r *InventoryRepository) SoftDelete(userID, id uint64) error {
 
 	return nil
 }
+
+// ListExpiring は期限切れ間近の在庫一覧を返す。
+// withinDays 日以内に expires_at が到来するレコードを期限昇順で返す。
+// 論理削除済みは除外。
+func (r *InventoryRepository) ListExpiring(userID uint64, withinDays int) ([]model.InventoryItem, error) {
+	var items []model.InventoryItem
+
+	err := r.db.Preload("Category").
+	Where("user_id = ? AND expires_at IS NOT NULL AND expires_at <= DATE_ADD(CURDATE(), INTERVAL ? DAY)", userID, withinDays).
+	Order("expires_at ASC").
+	Find(&items).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("inventory expiring 取得失敗: %w", err)
+	}
+
+	return items, nil
+}

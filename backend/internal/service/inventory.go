@@ -296,3 +296,43 @@ func parseDate(s *string) (*time.Time, error) {
 	}
 	return &t, nil
 }
+
+// GetExpiring は期限切れ間近の在庫一覧を返す。
+// withinDays 未指定（nil）の場合はデフォルト 3 日を適用する。
+func (s *InventoryService) GetExpiring(userID uint64, params model.ExpiringParams) ([]model.ExpiringItem, error) {
+	withinDays := 3
+	
+	if params.WithinDays != nil {
+		withinDays = *params.WithinDays
+	}
+
+	items, err := s.repo.ListExpiring(userID, withinDays)
+	if err != nil {
+		return nil, err
+	}
+
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+
+	result := make([]model.ExpiringItem, len(items))
+	for i, item := range items {
+		daysRemaining := int(item.ExpiresAt.Sub(today).Hours() / 24)
+
+		var category *model.CategoryResponse
+		if item.Category != nil {
+			category = &model.CategoryResponse{
+				ID:   item.Category.ID,
+				Name: item.Category.Name,
+			}
+		}
+
+		result[i] = model.ExpiringItem{
+			ID:            item.ID,
+			Name:          item.Name,
+			ExpiresAt:     item.ExpiresAt.Format("2006-01-02"),
+			DaysRemaining: daysRemaining,
+			Category:      category,
+		}
+	}
+
+	return result, nil
+}

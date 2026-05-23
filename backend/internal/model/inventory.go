@@ -103,3 +103,17 @@ type UpdateInventoryItemRequest struct {
 	StorageLocation *string  `json:"storage_location"`
 	Memo            *string  `json:"memo"`
 }
+
+// ExpiringItem は GET /api/inventory/expiring のレスポンス1件。
+type ExpiringItem struct {
+	ID            uint64            `json:"id"`
+	Name          string            `json:"name"`
+	ExpiresAt     string            `json:"expires_at"`     // "YYYY-MM-DD"
+	DaysRemaining int               `json:"days_remaining"` // 負値=期限切れ
+	Category      *CategoryResponse `json:"category"`
+}
+
+// ExpiringParams は GET /api/inventory/expiring のクエリパラメータ。
+type ExpiringParams struct {
+	WithinDays *int `form:"within_days"` // 省略時はサービス層でデフォルト 3 を適用
+}
