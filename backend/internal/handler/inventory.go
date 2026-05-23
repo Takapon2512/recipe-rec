@@ -314,6 +314,29 @@ func (h *InventoryHandler) GetExpiring(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": items})
 }
 
+// Suggest は GET /api/inventory/suggest のハンドラ。
+func (h *InventoryHandler) Suggest(c *gin.Context) {
+	_, user, ok := resolveExistingUser(c, h.userService)
+	if !ok {
+		return
+	}
+
+	var params model.SuggestParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		respondValidationError(c, bindingErrorMessage(err))
+		return
+	}
+
+	items, err := h.inventoryService.Suggest(user.ID, params)
+	if err != nil {
+		slog.Error("inventory suggest failed", "error", err)
+		respondInternalError(c)
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"data": items})
+}
+
 // --- ヘルパー ---
 
 // parseInventoryID はパスパラメータ :id を uint64 にパースする。

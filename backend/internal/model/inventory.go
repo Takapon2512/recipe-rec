@@ -117,3 +117,17 @@ type ExpiringItem struct {
 type ExpiringParams struct {
 	WithinDays *int `form:"within_days"` // 省略時はサービス層でデフォルト 3 を適用
 }
+
+// SuggestItem は GET /api/inventory/suggest のレスポンス1件。
+type SuggestItem struct {
+	Name                    string            `json:"name"`
+	FrequentCategory        *CategoryResponse `json:"frequent_category"`
+	FrequentStorageLocation *string           `json:"frequent_storage_location"`
+	LastUsedAt              string            `json:"last_used_at"` // ISO 8601 UTC
+}
+
+// SuggestParams は GET /api/inventory/suggest のクエリパラメータ。
+type SuggestParams struct {
+	Q     string `form:"q"     binding:"required,min=1"`
+	Limit *int   `form:"limit"` // 省略時はサービス層でデフォルト 5 を適用
+}

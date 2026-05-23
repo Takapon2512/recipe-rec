@@ -336,3 +336,19 @@ func (s *InventoryService) GetExpiring(userID uint64, params model.ExpiringParam
 
 	return result, nil
 }
+
+// Suggest は q に部分一致する商品名サジェストを返す。
+// limit 未指定（nil）の場合はデフォルト 5 を適用する。
+func (s *InventoryService) Suggest(userID uint64, params model.SuggestParams) ([]model.SuggestItem, error) {
+	limit := 5
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+
+	items, err := s.repo.Suggest(userID, params.Q, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
