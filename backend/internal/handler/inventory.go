@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/Takapon2512/recipe-recommend/backend/internal/model"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/service"
@@ -96,6 +98,212 @@ func (h *InventoryHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": resp})
 }
 
+// GetByID は GET /api/inventory/:id のハンドラ。
+func (h *InventoryHandler) GetByID(c *gin.Context) {
+	_, user, ok := resolveExistingUser(c, h.userService)
+	if !ok {
+		return
+	}
+
+	id, ok := parseInventoryID(c)
+	if !ok {
+		return
+	}
+
+	item, err := h.inventoryService.GetInventoryItem(user.ID, id)
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			respondNotFound(c)
+			return
+		}
+		slog.Error("inventory get failed", "id", id, "error", err)
+		respondInternalError(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": toInventoryResponse(item)})
+}
+
+// Update は PATCH /api/inventory/:id のハンドラ。
+// 送信されたフィールドのみ更新する部分更新。
+// category_id に null を明示送信するとカテゴリを未分類に変更する。
+func (h *InventoryHandler) Update(c *gin.Context) {
+	_, user, ok := resolveExistingUser(c, h.userService)
+	if !ok {
+		return
+	}
+
+	id, ok := parseInventoryID(c)
+	if !ok {
+		return
+	}
+
+	// --- リクエストボディのパース ---
+	// ShouldBindJSON だけでは "category_id": null（明示的 null）と
+	// フィールド未送信を区別できないため、map で一度受けて判定する。
+	var raw map[string]json.RawMessage
+	if err := c.ShouldBindJSON(&raw); err != nil {
+		respondValidationError(c, bindingErrorMessage(err))
+		return
+	}
+
+	var req model.UpdateInventoryItemRequest
+
+	// 各フィールドを手動でデコード（送信されたキーのみポインタにセット）
+	if v, exists := raw["name"]; exists {
+		var s string
+		if err := json.Unmarshal(v, &s); err != nil {
+			respondValidationError(c, "name は文字列で指定してください")
+			return
+		}
+		req.Name = &s
+	}
+	if v, exists := raw["category_id"]; exists {
+		if string(v) == "null" {
+			// null 明示 → カテゴリ解除
+			req.ClearCategoryID = true
+		} else {
+			var categoryID int
+			if err := json.Unmarshal(v, &categoryID); err != nil {
+				respondValidationError(c, "category_id は整数で指定してください")
+				return
+			}
+			req.CategoryID = &categoryID
+		}
+	}
+	if v, exists := raw["quantity"]; exists {
+		var f float64
+		if err := json.Unmarshal(v, &f); err != nil {
+			respondValidationError(c, "quantity は数値で指定してください")
+			return
+		}
+		req.Quantity = &f
+	}
+	if v, exists := raw["unit"]; exists {
+		var s string
+		if err := json.Unmarshal(v, &s); err != nil {
+			respondValidationError(c, "unit は文字列で指定してください")
+			return
+		}
+		req.Unit = &s
+	}
+	if v, exists := raw["purchased_at"]; exists {
+		if string(v) == "null" {
+			// null 明示 → フィールドをクリア（空文字列で parseDate に nil を返させる）
+			empty := ""
+			req.PurchasedAt = &empty
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				respondValidationError(c, "purchased_at は文字列で指定してください")
+				return
+			}
+			req.PurchasedAt = &s
+		}
+	}
+	if v, exists := raw["expires_at"]; exists {
+		if string(v) == "null" {
+			empty := ""
+			req.ExpiresAt = &empty
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				respondValidationError(c, "expires_at は文字列で指定してください")
+				return
+			}
+			req.ExpiresAt = &s
+		}
+	}
+	if v, exists := raw["storage_location"]; exists {
+		if string(v) == "null" {
+			empty := ""
+			req.StorageLocation = &empty
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				respondValidationError(c, "storage_location は文字列で指定してください")
+				return
+			}
+			req.StorageLocation = &s
+		}
+	}
+	if v, exists := raw["memo"]; exists {
+		if string(v) == "null" {
+			empty := ""
+			req.Memo = &empty
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				respondValidationError(c, "memo は文字列で指定してください")
+				return
+			}
+			req.Memo = &s
+		}
+	}
+	item, err := h.inventoryService.UpdateInventoryItem(user.ID, id, &req)
+	if err != nil {
+		var ve *service.ValidationError
+		switch {
+		case errors.Is(err, service.ErrNotFound):
+			respondNotFound(c)
+		case errors.Is(err, service.ErrCategoryNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": gin.H{
+					"code":    "NOT_FOUND",
+					"message": "specified category_id does not exist",
+				},
+			})
+		case errors.As(err, &ve):
+			slog.Warn("inventory update validation failed", "id", id, "error", err)
+			respondValidationError(c, ve.Error())
+		default:
+			slog.Error("inventory update failed", "id", id, "error", err)
+			respondInternalError(c)
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": toInventoryResponse(item)})
+}
+
+// Delete は DELETE /api/inventory/:id のハンドラ。論理削除、204 No Content を返す。
+func (h *InventoryHandler) Delete(c *gin.Context) {
+	_, user, ok := resolveExistingUser(c, h.userService)
+	if !ok {
+		return
+	}
+
+	id, ok := parseInventoryID(c)
+	if !ok {
+		return
+	}
+
+	if err := h.inventoryService.DeleteInventoryItem(user.ID, id); err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			respondNotFound(c)
+			return
+		}
+		slog.Error("inventory delete failed", "id", id, "error", err)
+		respondInternalError(c)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// --- ヘルパー ---
+
+// parseInventoryID はパスパラメータ :id を uint64 にパースする。
+// パース失敗時は 400 を返し false を返す。
+func parseInventoryID(c *gin.Context) (uint64, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		respondValidationError(c, "id は1以上の整数で指定してください")
+		return 0, false
+	}
+	return id, true
+}
+
 // レスポンス成形
 // toInventoryResponse は InventoryItem を InventoryResponse に変換する。
 func toInventoryResponse(item *model.InventoryItem) model.InventoryResponse {
@@ -132,6 +340,12 @@ func toInventoryResponse(item *model.InventoryItem) model.InventoryResponse {
 func respondValidationError(c *gin.Context, message string) {
 	c.JSON(http.StatusBadRequest, gin.H{
 		"error": gin.H{"code": "VALIDATION_ERROR", "message": message},
+	})
+}
+
+func respondNotFound(c *gin.Context) {
+	c.JSON(http.StatusNotFound, gin.H{
+		"error": gin.H{"code": "NOT_FOUND", "message": "not found"},
 	})
 }
 

@@ -87,3 +87,19 @@ type Pagination struct {
 	Total      int64 `json:"total"`
 	TotalPages int   `json:"total_pages"`
 }
+
+// UpdateInventoryItemRequest は PATCH /api/inventory/{id} のリクエストボディ。
+// 送信されたフィールドのみ更新する部分更新（omitempty は使わず *型 でゼロ値と未送信を区別する）。
+// NOTE: binding タグは ShouldBindJSON では使われない。ハンドラが map[string]json.RawMessage で
+// 手動パースするため、バリデーションは service 層で行っている。
+type UpdateInventoryItemRequest struct {
+	Name            *string  `json:"name"`
+	CategoryID      *int     `json:"category_id"` // null を明示的に送るとカテゴリ解除
+	ClearCategoryID bool     `json:"-"`           // "category_id": null が明示送信された場合に true をセット
+	Quantity        *float64 `json:"quantity"`
+	Unit            *string  `json:"unit"`
+	PurchasedAt     *string  `json:"purchased_at"`
+	ExpiresAt       *string  `json:"expires_at"`
+	StorageLocation *string  `json:"storage_location"`
+	Memo            *string  `json:"memo"`
+}
