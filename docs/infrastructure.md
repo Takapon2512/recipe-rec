@@ -18,7 +18,7 @@ flowchart TB
         Vercel[Vercel<br/>Next.js / SSR]
         Cognito[Amazon Cognito<br/>User Pool]
         Google[Google OAuth]
-        Bedrock[Amazon Bedrock<br/>Claude]
+        ClaudeAPI[Claude API<br/>（Anthropic）]
     end
 
     subgraph AWS[AWS / ap-northeast-1]
@@ -51,7 +51,7 @@ flowchart TB
     ALB --> EC2
     EC2 -->|JWKs取得| Cognito
     EC2 --> RDS
-    EC2 --> Bedrock
+    EC2 --> ClaudeAPI
     EC2 -->|画像アップロード| S3
     CloudFront --> S3
     EC2 --> CW
@@ -92,7 +92,7 @@ flowchart TB
 
 | 項目 | 採用 | 理由 |
 |------|------|------|
-| Internet Gateway | ○ | EC2が外部API（Cognito JWKs、Bedrock）を呼ぶため必須 |
+| Internet Gateway | ○ | EC2が外部API（Cognito JWKs、Claude API）を呼ぶため必須 |
 | NAT Gateway | × | コスト削減のため不採用。EC2はPublic Subnetに配置 |
 | VPC Endpoint | × | コスト削減のため不採用。S3もインターネット経由で接続 |
 
@@ -129,7 +129,7 @@ flowchart TB
 |------|-----------|--------|------------|------|
 | Inbound | TCP | 8080 | `sg-alb` | ALBからのアプリ受信 |
 | Inbound | TCP | 22 | 自IP/32 | SSH（運用時のみ、Session Manager推奨） |
-| Outbound | TCP | 443 | `0.0.0.0/0` | Cognito/Bedrock/S3呼び出し |
+| Outbound | TCP | 443 | `0.0.0.0/0` | Cognito/Claude API/S3呼び出し |
 | Outbound | TCP | 3306 | `sg-rds` | RDSへ接続 |
 
 #### sg-rds（RDS用）
@@ -147,23 +147,10 @@ EC2がAWSサービスにアクセスするためのIAMロール。**アクセス
 |---------|------|
 | `AmazonSSMManagedInstanceCore` | Session Manager接続 |
 | `CloudWatchAgentServerPolicy` | CloudWatch Logs/メトリクス送信 |
-| `BedrockInvokeModelPolicy`（カスタム） | Bedrock呼び出し |
 | `S3AppBucketAccess`（カスタム） | アプリ用S3バケットへのRW |
-| `SecretsManagerReadOnly`（カスタム） | DB認証情報の取得 |
+| `SecretsManagerReadOnly`（カスタム） | DB認証情報・APIキーの取得 |
 
-#### カスタムポリシー例（Bedrock呼び出し）
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": ["bedrock:InvokeModel"],
-      "Resource": "arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-*"
-    }
-  ]
-}
-```
+> **注意**：Bedrock IAMロールは不要。Claude APIキー（`ANTHROPIC_API_KEY`）は Secrets Manager で管理し、アプリ起動時に取得する。
 
 ### 3.3 SSH/運用アクセス
 - **SSH直接接続は原則禁止**
@@ -178,6 +165,7 @@ EC2がAWSサービスにアクセスするためのIAMロール。**アクセス
 | `prod/db/credentials` | RDSのユーザー名・パスワード |
 | `prod/cognito/client-secret` | Cognito クライアントシークレット |
 | `prod/google/oauth` | Google OAuth クライアントID/シークレット |
+| `prod/anthropic/api-key` | Anthropic APIキー |
 
 EC2は起動時にIAMロール経由で取得。
 
@@ -311,13 +299,15 @@ EC2は起動時にIAMロール経由で取得。
 | アラーム | EC2 CPU > 80%、RDS接続枯渇、ALB 5xx率 > 5% |
 | 通知先 | SNS → メール |
 
-### 4.11 Bedrock
+### 4.11 Claude API（Anthropic）
 
 | 項目 | 設定 |
 |------|------|
-| モデル | Claude（最新の利用可能なバージョン） |
-| アクセス方法 | EC2のIAMロール経由 `bedrock:InvokeModel` |
-| 利用ガードレール | 入力サイズ・出力サイズの上限を設定 |
+| モデル | `claude-sonnet-4-6`（環境変数 `ANTHROPIC_MODEL` で変更可） |
+| アクセス方法 | Anthropic APIキー（`ANTHROPIC_API_KEY`）による直接呼び出し |
+| エンドポイント | `https://api.anthropic.com/v1/messages` |
+| APIキー管理 | Secrets Manager `prod/anthropic/api-key` に格納し、起動時に取得 |
+| 利用ガードレール | `max_tokens` で出力サイズを制限 |
 
 ---
 
@@ -350,7 +340,7 @@ EC2は起動時にIAMロール経由で取得。
 ### 5.4 コスト最適化TIPS
 - EC2は **Compute Savings Plans** で1年契約すれば約30%割引
 - RDSは **Reserved Instance** 1年契約で約30%割引
-- S3 / CloudFront / Bedrock は従量課金（使用分のみ）
+- S3 / CloudFront / Claude API は従量課金（使用分のみ）
 - 開発環境は使用時のみ起動してコスト圧縮
 
 ---
@@ -370,7 +360,7 @@ EC2は起動時にIAMロール経由で取得。
 | S3 | 数GB保存 + 少量リクエスト | $1 |
 | CloudFront | 数GB配信 | $1 |
 | Cognito | MAU < 50 | $0 |
-| Bedrock (Claude) | 月数十回〜数百回呼び出し | $1〜10 |
+| Claude API (Anthropic) | 月数十回〜数百回呼び出し | $1〜10 |
 | CloudWatch | ログ数GB + 基本メトリクス | $2 |
 | Secrets Manager | 3シークレット | $1.5 |
 | データ転送 | EC2 OUT 数GB等 | $1〜3 |

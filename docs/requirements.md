@@ -128,7 +128,7 @@
    ↓
 [Amazon Cognito] (認証・MFA・Google OIDC)
 [Amazon RDS for MySQL 8.0] (データ永続化)
-[Amazon Bedrock] (Claude によるレシピ提案)
+[Claude API (Anthropic)] (Claudeによるレシピ提案)
 ```
 
 ### 4.2 主要技術スタック
@@ -140,7 +140,7 @@
 | HTTPS終端 | ALB + ACM、または EC2 上の Nginx/Caddy + Let's Encrypt |
 | 認証 | Amazon Cognito User Pool |
 | DB | Amazon RDS for MySQL 8.0 (db.t4g.micro / Single-AZ) |
-| LLM | Amazon Bedrock（Claude） |
+| LLM | Claude API（Anthropic） |
 | IaC | Terraform または AWS CDK（任意） |
 
 ### 4.3 月額コスト試算（東京リージョン目安）
@@ -150,7 +150,7 @@
 | EC2 | t4g.nano | $3〜4 |
 | RDS for MySQL | db.t4g.micro + gp3 20GB | $16〜18 |
 | Cognito | MAU 50人未満 | $0 |
-| Bedrock (Claude) | 軽い使用 | $1〜10 |
+| Claude API (Anthropic) | 軽い使用 | $1〜10 |
 | **合計** | ALBを省略しEC2上のNginx/Caddyで代替する場合 | **約 $20〜35/月** |
 
 ※ ALB を採用する場合は別途 +$20/月 程度。
