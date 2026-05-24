@@ -139,11 +139,3 @@ type InventorySummary struct {
 	ExpiredCount  int64 `json:"expired_count"`   // 既に期限切れ（expires_at < 今日）
 	NoExpiryCount int64 `json:"no_expiry_count"` // expires_at IS NULL
 }
-
-// suggestRow は Suggest クエリの中間結果。Category 名の解決前に使う内部型。
-type SummaryRow struct {
-	TotalCount    int64 `gorm:"column:total_count"`
-	ExpiringCount int64 `gorm:"column:expiring_count"`
-	ExpiredCount  int64 `gorm:"column:expired_count"`
-	NoExpiryCount int64 `gorm:"column:no_expiry_count"`
-}

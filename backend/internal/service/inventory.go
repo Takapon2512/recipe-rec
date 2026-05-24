@@ -291,10 +291,10 @@ func (s *InventoryService) GetExpiring(userID uint64, params model.ExpiringParam
 
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 
-	result := make([]model.ExpiringItem, len(items))
-	for i, item := range items {
+	result := make([]model.ExpiringItem, 0, len(items))
+	for _, item := range items {
 		if item.ExpiresAt == nil {
-			continue // または適切なデフォルト値
+			continue
 		}
 
 		daysRemaining := int(item.ExpiresAt.Sub(today).Hours() / 24)
@@ -307,13 +307,13 @@ func (s *InventoryService) GetExpiring(userID uint64, params model.ExpiringParam
 			}
 		}
 
-		result[i] = model.ExpiringItem{
+		result = append(result, model.ExpiringItem{
 			ID:            item.ID,
 			Name:          item.Name,
 			ExpiresAt:     item.ExpiresAt.Format("2006-01-02"),
 			DaysRemaining: daysRemaining,
 			Category:      category,
-		}
+		})
 	}
 
 	return result, nil
