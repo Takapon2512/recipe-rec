@@ -17,6 +17,9 @@ var ErrCategoryNotFound = errors.New("category not found")
 // ErrNotFound はリソースが存在しない・削除済み・他ユーザー所有の場合のエラー。
 var ErrNotFound = errors.New("not found")
 
+// ExpiringWithinDays はサマリーの「期限間近」判定日数。
+const ExpiringWithinDays = 3
+
 // ValidationError はリクエスト値起因のバリデーションエラー。
 // ハンドラ側で errors.As により 400 と 500 を区別する。
 type ValidationError struct{ msg string }
@@ -272,36 +275,11 @@ func (s *InventoryService) DeleteInventoryItem(userID, id uint64) error {
 	return translateNotFound(s.repo.SoftDelete(userID, id))
 }
 
-// translateNotFound は repository.ErrNotFound を service.ErrNotFound に変換する。
-// それ以外のエラーはそのまま返す。
-func translateNotFound(err error) error {
-	if errors.Is(err, repository.ErrNotFound) {
-		return ErrNotFound
-	}
-	return err
-}
-
-// parseDate は "YYYY-MM-DD" 文字列を *time.Time に変換する。nil または空文字の場合は nil を返す。
-func parseDate(s *string) (*time.Time, error) {
-	if s == nil {
-		return nil, nil
-	}
-	trimmed := strings.TrimSpace(*s)
-	if trimmed == "" {
-		return nil, nil
-	}
-	t, err := time.Parse("2006-01-02", trimmed)
-	if err != nil {
-		return nil, fmt.Errorf("date must be YYYY-MM-DD format, got: %s", trimmed)
-	}
-	return &t, nil
-}
-
 // GetExpiring は期限切れ間近の在庫一覧を返す。
 // withinDays 未指定（nil）の場合はデフォルト 3 日を適用する。
 func (s *InventoryService) GetExpiring(userID uint64, params model.ExpiringParams) ([]model.ExpiringItem, error) {
 	withinDays := 3
-	
+
 	if params.WithinDays != nil {
 		withinDays = *params.WithinDays
 	}
@@ -351,4 +329,44 @@ func (s *InventoryService) Suggest(userID uint64, params model.SuggestParams) ([
 	}
 
 	return items, nil
+}
+
+// GetSummary は在庫件数サマリーを返す。
+func (s *InventoryService) GetSummary(userID uint64) (*model.InventorySummary, error) {
+	row, err := s.repo.GetSummary(userID, ExpiringWithinDays)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.InventorySummary{
+		TotalCount:    row.TotalCount,
+		ExpiringCount: row.ExpiringCount,
+		ExpiredCount:  row.ExpiredCount,
+		NoExpiryCount: row.NoExpiryCount,
+	}, nil
+}
+
+// translateNotFound は repository.ErrNotFound を service.ErrNotFound に変換する。
+// それ以外のエラーはそのまま返す。
+func translateNotFound(err error) error {
+	if errors.Is(err, repository.ErrNotFound) {
+		return ErrNotFound
+	}
+	return err
+}
+
+// parseDate は "YYYY-MM-DD" 文字列を *time.Time に変換する。nil または空文字の場合は nil を返す。
+func parseDate(s *string) (*time.Time, error) {
+	if s == nil {
+		return nil, nil
+	}
+	trimmed := strings.TrimSpace(*s)
+	if trimmed == "" {
+		return nil, nil
+	}
+	t, err := time.Parse("2006-01-02", trimmed)
+	if err != nil {
+		return nil, fmt.Errorf("date must be YYYY-MM-DD format, got: %s", trimmed)
+	}
+	return &t, nil
 }

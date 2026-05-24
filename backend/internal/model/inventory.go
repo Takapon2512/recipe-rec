@@ -131,3 +131,11 @@ type SuggestParams struct {
 	Q     string `form:"q"     binding:"required,min=1"`
 	Limit *int   `form:"limit"` // 省略時はサービス層でデフォルト 5 を適用
 }
+
+// InventorySummary は GET /api/inventory/summary のレスポンス。
+type InventorySummary struct {
+	TotalCount    int64 `json:"total_count"`
+	ExpiringCount int64 `json:"expiring_count"`  // 当日〜3日以内に期限が来るもの
+	ExpiredCount  int64 `json:"expired_count"`   // 既に期限切れ（expires_at < 今日）
+	NoExpiryCount int64 `json:"no_expiry_count"` // expires_at IS NULL
+}

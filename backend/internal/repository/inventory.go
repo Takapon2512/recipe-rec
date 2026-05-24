@@ -16,10 +16,17 @@ type InventoryRepository struct {
 
 // suggestRow は Suggest クエリの中間結果。Category 名の解決前に使う内部型。
 type suggestRow struct {
-	Name                    string     `gorm:"column:name"`
-	FrequentCategoryID      *int       `gorm:"column:frequent_category_id"`
-	FrequentStorageLocation *string    `gorm:"column:frequent_storage_location"`
-	LastUsedAt              time.Time  `gorm:"column:last_used_at"`
+	Name                    string    `gorm:"column:name"`
+	FrequentCategoryID      *int      `gorm:"column:frequent_category_id"`
+	FrequentStorageLocation *string   `gorm:"column:frequent_storage_location"`
+	LastUsedAt              time.Time `gorm:"column:last_used_at"`
+}
+
+type SummaryRow struct {
+	TotalCount    int64 `gorm:"column:total_count"`
+	ExpiringCount int64 `gorm:"column:expiring_count"`
+	ExpiredCount  int64 `gorm:"column:expired_count"`
+	NoExpiryCount int64 `gorm:"column:no_expiry_count"`
 }
 
 func NewInventoryRepository(db *gorm.DB) *InventoryRepository {
@@ -188,9 +195,9 @@ func (r *InventoryRepository) ListExpiring(userID uint64, withinDays int) ([]mod
 	var items []model.InventoryItem
 
 	err := r.db.Preload("Category").
-	Where("user_id = ? AND expires_at IS NOT NULL AND expires_at <= DATE_ADD(CURDATE(), INTERVAL ? DAY)", userID, withinDays).
-	Order("expires_at ASC").
-	Find(&items).Error
+		Where("user_id = ? AND expires_at IS NOT NULL AND expires_at <= DATE_ADD(CURDATE(), INTERVAL ? DAY)", userID, withinDays).
+		Order("expires_at ASC").
+		Find(&items).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("inventory expiring 取得失敗: %w", err)
@@ -274,5 +281,27 @@ func (r *InventoryRepository) Suggest(userID uint64, q string, limit int) ([]mod
 		result[i] = item
 	}
 
-	return  result, nil
+	return result, nil
+}
+
+// GetSummary は在庫件数サマリーを1クエリで集計して返す。
+func (r *InventoryRepository) GetSummary(userID uint64, expiringWithinDays int) (*SummaryRow, error) {
+	var row SummaryRow
+
+	err := r.db.Model(&model.InventoryItem{}).
+		Select(`
+			COUNT(*) AS total_count,
+			SUM(CASE WHEN expires_at >= CURDATE()
+			         AND expires_at <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+			         THEN 1 ELSE 0 END) AS expiring_count,
+			SUM(CASE WHEN expires_at < CURDATE() THEN 1 ELSE 0 END) AS expired_count,
+			SUM(CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END)     AS no_expiry_count`,
+			expiringWithinDays).
+		Where("user_id = ?", userID).
+		Scan(&row).Error
+	if err != nil {
+		return nil, fmt.Errorf("inventory summary 取得失敗: %w", err)
+	}
+
+	return &row, nil
 }
