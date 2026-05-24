@@ -182,7 +182,7 @@ flowchart LR
     EC2[EC2<br/>業務API]
     Cognito[Cognito<br/>User Pool]
     DB[(RDS for MySQL)]
-    Bedrock[Amazon Bedrock<br/>Claude]
+    ClaudeAPI[Claude API<br/>（Anthropic）]
     Google[Google OAuth]
 
     User --> Browser
@@ -193,7 +193,7 @@ flowchart LR
     ALB --> EC2
     EC2 -->|JWT検証<br/>JWKs取得| Cognito
     EC2 <--> DB
-    EC2 -->|レシピ提案| Bedrock
+    EC2 -->|レシピ提案| ClaudeAPI
 ```
 
 ### 2.2 在庫登録のデータフロー
@@ -220,7 +220,7 @@ flowchart TD
     C --> D[EC2 アプリ<br/>recommendation ハンドラ]
     D --> E[RDS for MySQL<br/>SELECT inventory<br/>WHERE user_id=?]
     E --> F[在庫データを<br/>プロンプト整形]
-    F --> G[Bedrock InvokeModel<br/>Claude]
+    F --> G[Claude API<br/>（Anthropic）POST /v1/messages]
     G --> H[レシピ候補JSON取得]
     H --> I[結果バリデーション・<br/>整形]
     I --> J[200 OK<br/>レシピ3〜5件返却]

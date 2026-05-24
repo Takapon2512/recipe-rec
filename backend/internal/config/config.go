@@ -14,8 +14,8 @@ type Config struct {
 	CognitoRegion     string
 	CognitoUserPoolID string
 	CognitoClientID   string
-	BedrockRegion     string
-	BedrockModelID    string
+	AnthropicAPIKey   string
+	AnthropicModel    string
 	AllowedOrigins    []string
 	Env               string
 }
@@ -30,8 +30,8 @@ func Load() (*Config, error) {
 		CognitoRegion:     os.Getenv("COGNITO_REGION"),
 		CognitoUserPoolID: os.Getenv("COGNITO_USER_POOL_ID"),
 		CognitoClientID:   os.Getenv("COGNITO_CLIENT_ID"),
-		BedrockRegion:     os.Getenv("BEDROCK_REGION"),
-		BedrockModelID:    os.Getenv("BEDROCK_MODEL_ID"),
+		AnthropicAPIKey:   os.Getenv("ANTHROPIC_API_KEY"),
+		AnthropicModel:    getEnv("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
 		AllowedOrigins:    strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
 		Env:               getEnv("ENV", "development"),
 	}

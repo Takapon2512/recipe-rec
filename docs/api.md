@@ -569,14 +569,14 @@ sequenceDiagram
     participant API as EC2 API
     participant Q as ジョブキュー<br/>(DB or in-memory)
     participant W as Worker
-    participant Bedrock
+    participant ClaudeAPI as Claude API<br/>（Anthropic）
 
     FE->>API: POST /api/recommendations
     API->>Q: ジョブ登録
     API-->>FE: 202 + job_id (status=pending)
     W->>Q: ジョブ取得
-    W->>Bedrock: InvokeModel
-    Bedrock-->>W: レシピ候補
+    W->>ClaudeAPI: POST /v1/messages
+    ClaudeAPI-->>W: レシピ候補
     W->>Q: 結果保存 (status=succeeded)
 
     loop ポーリング (2〜5秒間隔)
@@ -679,7 +679,7 @@ sequenceDiagram
     "status": "failed",
     "error": {
       "code": "LLM_TIMEOUT",
-      "message": "Bedrock did not respond within 60 seconds"
+      "message": "Claude API did not respond within 60 seconds"
     }
   }
 }
@@ -944,7 +944,7 @@ backend/
 │   ├── cognito/
 │   │   └── verifier.go
 │   │
-│   └── bedrock/
+│   └── anthropic/
 │       └── client.go
 │
 ├── db/
@@ -972,7 +972,7 @@ backend/
 | `model` | 構造体定義（DB行・リクエスト・レスポンス） | メソッド・ロジック |
 | `middleware` | 横断的関心事（認証・ログ・CORS・レート制限） | ビジネスロジック |
 | `cognito` | JWT検証・JWKsキャッシュ管理 | HTTP routing |
-| `bedrock` | Bedrock API呼び出しのラッパー | レシピのビジネスロジック |
+| `anthropic` | Claude API呼び出しのラッパー | レシピのビジネスロジック |
 
 ---
 
@@ -984,7 +984,7 @@ main.go
 └─ service
 ├─ repository（DB）
 ├─ cognito（JWT検証）
-└─ bedrock（LLM）
+└─ anthropic（LLM）
 ```
 
 依存は上から下方向のみ。`repository` が `service` を参照するような逆方向の依存は禁止。
@@ -1000,8 +1000,8 @@ main.go
 | `COGNITO_REGION` | CognitoのAWSリージョン | `ap-northeast-1` |
 | `COGNITO_USER_POOL_ID` | User Pool ID | `ap-northeast-1_XXXXXXXXX` |
 | `COGNITO_CLIENT_ID` | アプリクライアントID | `xxxxxxxxxxxxxxxxxxxxxx` |
-| `BEDROCK_REGION` | BedrockのAWSリージョン | `ap-northeast-1` |
-| `BEDROCK_MODEL_ID` | 使用するモデルID | `anthropic.claude-3-5-sonnet-20241022-v2:0` |
+| `ANTHROPIC_API_KEY` | Anthropic APIキー | `sk-ant-...` |
+| `ANTHROPIC_MODEL` | 使用するモデルID（省略時はデフォルト） | `claude-sonnet-4-6` |
 | `ALLOWED_ORIGINS` | CORS許可オリジン（カンマ区切り） | `https://example.vercel.app,http://localhost:3000` |
 | `ENV` | 実行環境 | `production` / `development` |
 
