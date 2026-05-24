@@ -316,10 +316,12 @@ func (r *InventoryRepository) Restore(userID, id uint64) (*model.InventoryItem, 
 	if result.RowsAffected == 0 {
 		// 存在確認で 404 と 409 を振り分ける
 		var count int64
-		r.db.Unscoped().
+		if err := r.db.Unscoped().
 			Model(&model.InventoryItem{}).
 			Where("id = ? AND user_id = ?", id, userID).
-			Count(&count)
+			Count(&count).Error; err != nil {
+			return nil, fmt.Errorf("inventory restore 存在確認失敗: %w", err)
+		}
 
 		if count == 0 {
 			return nil, ErrNotFound

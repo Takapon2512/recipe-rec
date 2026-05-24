@@ -6,4 +6,4 @@ import "errors"
 var ErrNotFound = errors.New("not found")
 
 // ErrConflict はすでに更新済みである場合のエラー
-var ErrConflict = errors.New("confilict")
+var ErrConflict = errors.New("conflict")

@@ -360,7 +360,7 @@ func (s *InventoryService) RestoreInventoryItem(userID, id uint64) (*model.Inven
 	item, err := s.repo.Restore(userID, id)
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
-			return nil, repository.ErrConflict
+			return nil, ErrConflict
 		}
 		return nil, translateNotFound(err)
 	}
