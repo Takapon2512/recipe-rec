@@ -139,3 +139,7 @@ type InventorySummary struct {
 	ExpiredCount  int64 `json:"expired_count"`   // 既に期限切れ（expires_at < 今日）
 	NoExpiryCount int64 `json:"no_expiry_count"` // expires_at IS NULL
 }
+
+// RestoreInventoryRequest は POST /api/inventory/:id/restore のリクエスト。
+// ボディなし。型として定義のみ。
+type RestoreInventoryRequest struct{}

@@ -17,6 +17,9 @@ var ErrCategoryNotFound = errors.New("category not found")
 // ErrNotFound はリソースが存在しない・削除済み・他ユーザー所有の場合のエラー。
 var ErrNotFound = errors.New("not found")
 
+// ErrConflict はすでにアップデート済みの場合のエラー
+var ErrConflict = errors.New("conflict")
+
 // ExpiringWithinDays はサマリーの「期限間近」判定日数。
 const ExpiringWithinDays = 3
 
@@ -348,6 +351,20 @@ func (s *InventoryService) GetSummary(userID uint64) (*model.InventorySummary, e
 		ExpiredCount:  row.ExpiredCount,
 		NoExpiryCount: row.NoExpiryCount,
 	}, nil
+}
+
+// RestoreInventoryItem は論理削除済みの在庫を復元する。
+// 存在しない・他ユーザーのリソースの場合は ErrNotFound を返す。
+// 既に復元済みの場合は ErrConflict を返す。
+func (s *InventoryService) RestoreInventoryItem(userID, id uint64) (*model.InventoryItem, error) {
+	item, err := s.repo.Restore(userID, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrConflict) {
+			return nil, repository.ErrConflict
+		}
+		return nil, translateNotFound(err)
+	}
+	return item, nil
 }
 
 // translateNotFound は repository.ErrNotFound を service.ErrNotFound に変換する。
