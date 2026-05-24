@@ -17,6 +17,9 @@ var ErrCategoryNotFound = errors.New("category not found")
 // ErrNotFound はリソースが存在しない・削除済み・他ユーザー所有の場合のエラー。
 var ErrNotFound = errors.New("not found")
 
+// ExpiringWithinDays はサマリーの「期限間近」判定日数。
+const ExpiringWithinDays = 3
+
 // ValidationError はリクエスト値起因のバリデーションエラー。
 // ハンドラ側で errors.As により 400 と 500 を区別する。
 type ValidationError struct{ msg string }
@@ -270,6 +273,81 @@ func (s *InventoryService) UpdateInventoryItem(userID, id uint64, req *model.Upd
 // 存在しない・論理削除済み・他ユーザーのリソースの場合は ErrNotFound を返す。
 func (s *InventoryService) DeleteInventoryItem(userID, id uint64) error {
 	return translateNotFound(s.repo.SoftDelete(userID, id))
+}
+
+// GetExpiring は期限切れ間近の在庫一覧を返す。
+// withinDays 未指定（nil）の場合はデフォルト 3 日を適用する。
+func (s *InventoryService) GetExpiring(userID uint64, params model.ExpiringParams) ([]model.ExpiringItem, error) {
+	withinDays := 3
+
+	if params.WithinDays != nil {
+		withinDays = *params.WithinDays
+	}
+
+	items, err := s.repo.ListExpiring(userID, withinDays)
+	if err != nil {
+		return nil, err
+	}
+
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+
+	result := make([]model.ExpiringItem, 0, len(items))
+	for _, item := range items {
+		if item.ExpiresAt == nil {
+			continue
+		}
+
+		daysRemaining := int(item.ExpiresAt.Sub(today).Hours() / 24)
+
+		var category *model.CategoryResponse
+		if item.Category != nil {
+			category = &model.CategoryResponse{
+				ID:   item.Category.ID,
+				Name: item.Category.Name,
+			}
+		}
+
+		result = append(result, model.ExpiringItem{
+			ID:            item.ID,
+			Name:          item.Name,
+			ExpiresAt:     item.ExpiresAt.Format("2006-01-02"),
+			DaysRemaining: daysRemaining,
+			Category:      category,
+		})
+	}
+
+	return result, nil
+}
+
+// Suggest は q に部分一致する商品名サジェストを返す。
+// limit 未指定（nil）の場合はデフォルト 5 を適用する。
+func (s *InventoryService) Suggest(userID uint64, params model.SuggestParams) ([]model.SuggestItem, error) {
+	limit := 5
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+
+	items, err := s.repo.Suggest(userID, params.Q, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
+// GetSummary は在庫件数サマリーを返す。
+func (s *InventoryService) GetSummary(userID uint64) (*model.InventorySummary, error) {
+	row, err := s.repo.GetSummary(userID, ExpiringWithinDays)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.InventorySummary{
+		TotalCount:    row.TotalCount,
+		ExpiringCount: row.ExpiringCount,
+		ExpiredCount:  row.ExpiredCount,
+		NoExpiryCount: row.NoExpiryCount,
+	}, nil
 }
 
 // translateNotFound は repository.ErrNotFound を service.ErrNotFound に変換する。

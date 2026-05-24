@@ -14,6 +14,14 @@ type InventoryRepository struct {
 	db *gorm.DB
 }
 
+// suggestRow は Suggest クエリの中間結果。Category 名の解決前に使う内部型。
+type suggestRow struct {
+	Name                    string    `gorm:"column:name"`
+	FrequentCategoryID      *int      `gorm:"column:frequent_category_id"`
+	FrequentStorageLocation *string   `gorm:"column:frequent_storage_location"`
+	LastUsedAt              time.Time `gorm:"column:last_used_at"`
+}
+
 func NewInventoryRepository(db *gorm.DB) *InventoryRepository {
 	return &InventoryRepository{db: db}
 }
@@ -171,4 +179,122 @@ func (r *InventoryRepository) SoftDelete(userID, id uint64) error {
 	}
 
 	return nil
+}
+
+// ListExpiring は期限切れ間近の在庫一覧を返す。
+// withinDays 日以内に expires_at が到来するレコードを期限昇順で返す。
+// 論理削除済みは除外。
+func (r *InventoryRepository) ListExpiring(userID uint64, withinDays int) ([]model.InventoryItem, error) {
+	var items []model.InventoryItem
+
+	err := r.db.Preload("Category").
+		Where("user_id = ? AND expires_at IS NOT NULL AND expires_at <= DATE_ADD(CURDATE(), INTERVAL ? DAY)", userID, withinDays).
+		Order("expires_at ASC").
+		Find(&items).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("inventory expiring 取得失敗: %w", err)
+	}
+
+	return items, nil
+}
+
+// Suggest は q に部分一致する商品名サジェストを返す。
+// 過去30日以内の登録履歴（論理削除済み含む）を母集団とし、
+// name でグループ化して最頻 category_id・storage_location と最終登録日時を集計する。
+func (r *InventoryRepository) Suggest(userID uint64, q string, limit int) ([]model.SuggestItem, error) {
+	var rows []suggestRow
+
+	err := r.db.Unscoped().
+		Model(&model.InventoryItem{}).
+		Select(`
+			name,
+			MAX(created_at) AS last_used_at,
+			(SELECT category_id FROM inventory_items i2
+			WHERE i2.user_id = ? AND i2.name = inventory_items.name
+			AND i2.created_at >= NOW() - INTERVAL 30 DAY
+			GROUP BY category_id
+			ORDER BY COUNT(*) DESC, MAX(created_at) DESC
+			LIMIT 1) AS frequent_category_id,
+			(SELECT storage_location FROM inventory_items i3
+			WHERE i3.user_id = ? AND i3.name = inventory_items.name
+			AND i3.created_at >= NOW() - INTERVAL 30 DAY
+			GROUP BY storage_location
+			ORDER BY COUNT(*) DESC, MAX(created_at) DESC
+			LIMIT 1) AS frequent_storage_location`,
+			userID, userID).
+		Where("user_id = ? AND name LIKE ? AND created_at >= NOW() - INTERVAL 30 DAY",
+			userID, "%"+q+"%").
+		Group("name").
+		Order("last_used_at DESC").
+		Limit(limit).
+		Scan(&rows).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("inventory suggest 取得失敗: %w", err)
+	}
+
+	// frequent_category_id からカテゴリ名を解決する
+	categoryIDs := make([]int, 0, len(rows))
+	for _, row := range rows {
+		if row.FrequentCategoryID != nil {
+			categoryIDs = append(categoryIDs, *row.FrequentCategoryID)
+		}
+	}
+
+	categoryMap := make(map[int]model.Category)
+	if len(categoryIDs) > 0 {
+		var categories []model.Category
+		if err := r.db.Where("id IN ?", categoryIDs).Find(&categories).Error; err != nil {
+			return nil, fmt.Errorf("category 取得失敗: %w", err)
+		}
+		for _, c := range categories {
+			categoryMap[c.ID] = c
+		}
+	}
+
+	// SuggestItem に変換
+	result := make([]model.SuggestItem, len(rows))
+	for i, row := range rows {
+		item := model.SuggestItem{
+			Name:                    row.Name,
+			FrequentStorageLocation: row.FrequentStorageLocation,
+			LastUsedAt:              row.LastUsedAt.UTC().Format(time.RFC3339),
+		}
+
+		if row.FrequentCategoryID != nil {
+			if c, ok := categoryMap[*row.FrequentCategoryID]; ok {
+				item.FrequentCategory = &model.CategoryResponse{
+					ID:   c.ID,
+					Name: c.Name,
+				}
+			}
+		}
+
+		result[i] = item
+	}
+
+	return result, nil
+}
+
+// GetSummary は在庫件数サマリーを1クエリで集計して返す。
+func (r *InventoryRepository) GetSummary(userID uint64, expiringWithinDays int) (*model.InventorySummary, error) {
+	var row model.InventorySummary
+
+	err := r.db.Model(&model.InventoryItem{}).
+		Select(`
+			COUNT(*) AS total_count,
+			SUM(CASE WHEN expires_at >= CURDATE()
+			         AND expires_at <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+			         THEN 1 ELSE 0 END) AS expiring_count,
+			SUM(CASE WHEN expires_at < CURDATE() THEN 1 ELSE 0 END) AS expired_count,
+			SUM(CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END)     AS no_expiry_count`,
+			expiringWithinDays).
+		Where("user_id = ?", userID).
+		Scan(&row).Error
+	if err != nil {
+		return nil, fmt.Errorf("inventory summary 取得失敗: %w", err)
+	}
+
+	return &row, nil
 }

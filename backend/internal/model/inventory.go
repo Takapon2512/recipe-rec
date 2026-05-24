@@ -103,3 +103,39 @@ type UpdateInventoryItemRequest struct {
 	StorageLocation *string  `json:"storage_location"`
 	Memo            *string  `json:"memo"`
 }
+
+// ExpiringItem は GET /api/inventory/expiring のレスポンス1件。
+type ExpiringItem struct {
+	ID            uint64            `json:"id"`
+	Name          string            `json:"name"`
+	ExpiresAt     string            `json:"expires_at"`     // "YYYY-MM-DD"
+	DaysRemaining int               `json:"days_remaining"` // 負値=期限切れ
+	Category      *CategoryResponse `json:"category"`
+}
+
+// ExpiringParams は GET /api/inventory/expiring のクエリパラメータ。
+type ExpiringParams struct {
+	WithinDays *int `form:"within_days" binding:"omitempty,min=1"` // 省略時はサービス層でデフォルト 3 を適用
+}
+
+// SuggestItem は GET /api/inventory/suggest のレスポンス1件。
+type SuggestItem struct {
+	Name                    string            `json:"name"`
+	FrequentCategory        *CategoryResponse `json:"frequent_category"`
+	FrequentStorageLocation *string           `json:"frequent_storage_location"`
+	LastUsedAt              string            `json:"last_used_at"` // ISO 8601 UTC
+}
+
+// SuggestParams は GET /api/inventory/suggest のクエリパラメータ。
+type SuggestParams struct {
+	Q     string `form:"q"     binding:"required,min=1"`
+	Limit *int   `form:"limit" binding:"omitempty,min=1,max=12"` // 省略時はサービス層でデフォルト 5 を適用
+}
+
+// InventorySummary は GET /api/inventory/summary のレスポンス。
+type InventorySummary struct {
+	TotalCount    int64 `json:"total_count"`
+	ExpiringCount int64 `json:"expiring_count"`  // 当日〜3日以内に期限が来るもの
+	ExpiredCount  int64 `json:"expired_count"`   // 既に期限切れ（expires_at < 今日）
+	NoExpiryCount int64 `json:"no_expiry_count"` // expires_at IS NULL
+}

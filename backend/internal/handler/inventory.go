@@ -291,6 +291,69 @@ func (h *InventoryHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetExpiring は GET /api/inventory/expiring のハンドラ。
+func (h *InventoryHandler) GetExpiring(c *gin.Context) {
+	_, user, ok := resolveExistingUser(c, h.userService)
+	if !ok {
+		return
+	}
+
+	var params model.ExpiringParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		respondValidationError(c, bindingErrorMessage(err))
+		return
+	}
+
+	items, err := h.inventoryService.GetExpiring(user.ID, params)
+	if err != nil {
+		slog.Error("inventory expiring failed", "error", err)
+		respondInternalError(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": items})
+}
+
+// Suggest は GET /api/inventory/suggest のハンドラ。
+func (h *InventoryHandler) Suggest(c *gin.Context) {
+	_, user, ok := resolveExistingUser(c, h.userService)
+	if !ok {
+		return
+	}
+
+	var params model.SuggestParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		respondValidationError(c, bindingErrorMessage(err))
+		return
+	}
+
+	items, err := h.inventoryService.Suggest(user.ID, params)
+	if err != nil {
+		slog.Error("inventory suggest failed", "error", err)
+		respondInternalError(c)
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"data": items})
+}
+
+// GetSummary は GET /api/inventory/summary のハンドラ。
+func (h *InventoryHandler) GetSummary(c *gin.Context) {
+	_, user, ok := resolveExistingUser(c, h.userService)
+	if !ok {
+		return
+	}
+
+	summary, err := h.inventoryService.GetSummary(user.ID)
+	if err != nil {
+		slog.Error("inventory summary failed", "error", err)
+		respondInternalError(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": summary})
+}
+
 // --- ヘルパー ---
 
 // parseInventoryID はパスパラメータ :id を uint64 にパースする。

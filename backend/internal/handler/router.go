@@ -53,9 +53,9 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 
 		authorized.GET("/inventory", inventoryHandler.List)
 		authorized.POST("/inventory", inventoryHandler.Create)
-		authorized.GET("/inventory/expiring", stub)
-		authorized.GET("/inventory/suggest", stub)
-		authorized.GET("/inventory/summary", stub)
+		authorized.GET("/inventory/expiring", inventoryHandler.GetExpiring)
+		authorized.GET("/inventory/suggest", inventoryHandler.Suggest)
+		authorized.GET("/inventory/summary", inventoryHandler.GetSummary)
 		authorized.GET("/inventory/:id", inventoryHandler.GetByID)
 		authorized.PATCH("/inventory/:id", inventoryHandler.Update)
 		authorized.DELETE("/inventory/:id", inventoryHandler.Delete)
