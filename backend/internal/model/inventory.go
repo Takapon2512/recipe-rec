@@ -115,7 +115,7 @@ type ExpiringItem struct {
 
 // ExpiringParams は GET /api/inventory/expiring のクエリパラメータ。
 type ExpiringParams struct {
-	WithinDays *int `form:"within_days"` // 省略時はサービス層でデフォルト 3 を適用
+	WithinDays *int `form:"within_days" binding:"omitempty,min=1"` // 省略時はサービス層でデフォルト 3 を適用
 }
 
 // SuggestItem は GET /api/inventory/suggest のレスポンス1件。
@@ -129,7 +129,7 @@ type SuggestItem struct {
 // SuggestParams は GET /api/inventory/suggest のクエリパラメータ。
 type SuggestParams struct {
 	Q     string `form:"q"     binding:"required,min=1"`
-	Limit *int   `form:"limit"` // 省略時はサービス層でデフォルト 5 を適用
+	Limit *int   `form:"limit" binding:"omitempty,min=1,max=12"` // 省略時はサービス層でデフォルト 5 を適用
 }
 
 // InventorySummary は GET /api/inventory/summary のレスポンス。
@@ -138,4 +138,12 @@ type InventorySummary struct {
 	ExpiringCount int64 `json:"expiring_count"`  // 当日〜3日以内に期限が来るもの
 	ExpiredCount  int64 `json:"expired_count"`   // 既に期限切れ（expires_at < 今日）
 	NoExpiryCount int64 `json:"no_expiry_count"` // expires_at IS NULL
+}
+
+// suggestRow は Suggest クエリの中間結果。Category 名の解決前に使う内部型。
+type SummaryRow struct {
+	TotalCount    int64 `gorm:"column:total_count"`
+	ExpiringCount int64 `gorm:"column:expiring_count"`
+	ExpiredCount  int64 `gorm:"column:expired_count"`
+	NoExpiryCount int64 `gorm:"column:no_expiry_count"`
 }

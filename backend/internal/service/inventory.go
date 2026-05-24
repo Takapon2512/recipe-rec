@@ -293,6 +293,10 @@ func (s *InventoryService) GetExpiring(userID uint64, params model.ExpiringParam
 
 	result := make([]model.ExpiringItem, len(items))
 	for i, item := range items {
+		if item.ExpiresAt == nil {
+			continue // または適切なデフォルト値
+		}
+
 		daysRemaining := int(item.ExpiresAt.Sub(today).Hours() / 24)
 
 		var category *model.CategoryResponse

@@ -22,13 +22,6 @@ type suggestRow struct {
 	LastUsedAt              time.Time `gorm:"column:last_used_at"`
 }
 
-type SummaryRow struct {
-	TotalCount    int64 `gorm:"column:total_count"`
-	ExpiringCount int64 `gorm:"column:expiring_count"`
-	ExpiredCount  int64 `gorm:"column:expired_count"`
-	NoExpiryCount int64 `gorm:"column:no_expiry_count"`
-}
-
 func NewInventoryRepository(db *gorm.DB) *InventoryRepository {
 	return &InventoryRepository{db: db}
 }
@@ -285,8 +278,8 @@ func (r *InventoryRepository) Suggest(userID uint64, q string, limit int) ([]mod
 }
 
 // GetSummary は在庫件数サマリーを1クエリで集計して返す。
-func (r *InventoryRepository) GetSummary(userID uint64, expiringWithinDays int) (*SummaryRow, error) {
-	var row SummaryRow
+func (r *InventoryRepository) GetSummary(userID uint64, expiringWithinDays int) (*model.InventorySummary, error) {
+	var row model.InventorySummary
 
 	err := r.db.Model(&model.InventoryItem{}).
 		Select(`
