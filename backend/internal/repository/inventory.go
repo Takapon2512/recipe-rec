@@ -298,3 +298,43 @@ func (r *InventoryRepository) GetSummary(userID uint64, expiringWithinDays int) 
 
 	return &row, nil
 }
+
+// Restore は論理削除済みの在庫を復元する（deleted_at を NULL に戻す）。
+// 復元後のレコードを Preload 付きで返す。
+// - レコードが存在しない / 他ユーザーのリソース → ErrNotFound
+// - 既に復元済み（deleted_at IS NULL） → ErrConflict
+func (r *InventoryRepository) Restore(userID, id uint64) (*model.InventoryItem, error) {
+	result := r.db.Unscoped().
+		Model(&model.InventoryItem{}).
+		Where("id = ? AND user_id = ? AND deleted_at IS NOT NULL", id, userID).
+		Update("deleted_at", nil)
+	
+	if result.Error != nil {
+		return nil, fmt.Errorf("inventory restore 失敗: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		// 存在確認で 404 と 409 を振り分ける
+		var count int64
+		if err := r.db.Unscoped().
+			Model(&model.InventoryItem{}).
+			Where("id = ? AND user_id = ?", id, userID).
+			Count(&count).Error; err != nil {
+			return nil, fmt.Errorf("inventory restore 存在確認失敗: %w", err)
+		}
+
+		if count == 0 {
+			return nil, ErrNotFound
+		}
+		return nil, ErrConflict
+	}
+
+	var item model.InventoryItem
+	if err := r.db.Preload("Category").
+		Where("id = ? AND user_id = ?", id, userID).
+		First(&item).Error; err != nil {
+		return nil, fmt.Errorf("inventory restore 後の取得失敗: %w", err)
+	}
+
+	return &item, nil
+}

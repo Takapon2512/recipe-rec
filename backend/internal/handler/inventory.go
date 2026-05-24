@@ -354,6 +354,37 @@ func (h *InventoryHandler) GetSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": summary})
 }
 
+// Restore は POST /api/inventory/:id/restore のハンドラ。
+func (h *InventoryHandler) Restore(c *gin.Context) {
+	_, user, ok := resolveExistingUser(c, h.userService)
+	if !ok {
+		return
+	}
+
+	id, ok := parseInventoryID(c)
+	if !ok {
+		return
+	}
+
+	item, err := h.inventoryService.RestoreInventoryItem(user.ID, id)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrNotFound):
+			respondNotFound(c)
+		case errors.Is(err, service.ErrConflict):
+			c.JSON(http.StatusConflict, gin.H{
+				"error": gin.H{"code": "CONFLICT", "message": "already restored"},
+			})
+		default:
+			slog.Error("inventory restore failed", "id", id, "error", err)
+			respondInternalError(c)
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": toInventoryResponse(item)})
+}
+
 // --- ヘルパー ---
 
 // parseInventoryID はパスパラメータ :id を uint64 にパースする。
