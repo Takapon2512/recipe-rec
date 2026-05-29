@@ -118,15 +118,19 @@ CREATE TABLE meal_plans (
 
 -- recommendation_logs
 CREATE TABLE recommendation_logs (
-  id               BIGINT   NOT NULL AUTO_INCREMENT,
-  user_id          BIGINT   NOT NULL,
-  request_payload  JSON     NOT NULL,
-  response_payload JSON     NOT NULL,
-  latency_ms       INT      DEFAULT NULL,
-  created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at       DATETIME DEFAULT NULL,
+  id               BIGINT       NOT NULL AUTO_INCREMENT,
+  user_id          BIGINT       NOT NULL,
+  status           VARCHAR(20)  NOT NULL DEFAULT 'pending',
+  request_payload  JSON         NOT NULL,
+  response_payload JSON         DEFAULT NULL,
+  error_code       VARCHAR(50)  DEFAULT NULL,
+  error_message    TEXT         DEFAULT NULL,
+  latency_ms       INT          DEFAULT NULL,
+  created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at       DATETIME     DEFAULT NULL,
   PRIMARY KEY (id),
   KEY idx_user_created (user_id, created_at),
+  KEY idx_status_created (status, created_at),
   CONSTRAINT fk_log_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
