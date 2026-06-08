@@ -121,12 +121,16 @@ func (c *clientImpl) Recommend(ctx context.Context, req *RecommendRequest) (*mod
 	if err != nil {
 		return nil, fmt.Errorf("anthropic: http do: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			_ = err
+		}
+	}()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("anthropic: read body: %w", err)
 	}
- 
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("anthropic: unexpected status %d: %s", resp.StatusCode, string(respBody))
 	}
@@ -248,13 +252,13 @@ func daysUntil(dateStr string) int {
 		return 0
 	}
 	today := time.Now().Truncate(24 * time.Hour)
-	return int(t.Truncate(24 * time.Hour).Sub(today).Hours() / 24)
+	return int(t.Truncate(24*time.Hour).Sub(today).Hours() / 24)
 }
 
 // ----------------------------------------------------------------
 // レスポンスパース
 // ----------------------------------------------------------------
- 
+
 func extractText(resp apiResponse) string {
 	for _, block := range resp.Content {
 		if block.Type == "text" {
@@ -263,14 +267,14 @@ func extractText(resp apiResponse) string {
 	}
 	return ""
 }
- 
+
 func parseResult(text string) (*model.RecommendationResultPayload, error) {
 	// モデルが誤って ``` で囲んだ場合のフォールバック
 	text = strings.TrimPrefix(text, "```json")
 	text = strings.TrimPrefix(text, "```")
 	text = strings.TrimSuffix(text, "```")
 	text = strings.TrimSpace(text)
- 
+
 	var result model.RecommendationResultPayload
 	if err := json.Unmarshal([]byte(text), &result); err != nil {
 		return nil, fmt.Errorf("json unmarshal failed (raw: %.200s): %w", text, err)
