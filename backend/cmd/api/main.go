@@ -11,8 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Takapon2512/recipe-recommend/backend/internal/anthropic"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/config"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/handler"
+	"github.com/Takapon2512/recipe-recommend/backend/internal/repository"
+	"github.com/Takapon2512/recipe-recommend/backend/internal/service"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -51,8 +54,35 @@ func main() {
 		}
 	}()
 
+	// レコメンドサービス構築
+	llmClient := anthropic.NewClient(anthropic.ClientConfig{
+		APIKey: cfg.AnthropicAPIKey,
+		Model:  cfg.AnthropicModel,
+	})
+	recRepo := repository.NewRecommendationRepository(db)
+	invRepo := repository.NewInventoryRepository(db)
+	recService := service.NewRecommendationService(recRepo, invRepo, llmClient)
+
 	// ルーター構築
-	r := handler.NewRouter(cfg, db)
+	r := handler.NewRouter(cfg, db, recService)
+
+	// レコメンドワーカー起動（pending ジョブを定期処理）
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+	go func() {
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if err := recService.ProcessJob(workerCtx); err != nil {
+					slog.Error("recommendation worker error", "error", err)
+				}
+			case <-workerCtx.Done():
+				return
+			}
+		}
+	}()
 
 	// サーバ起動
 	srv := &http.Server{

@@ -22,6 +22,15 @@ type suggestRow struct {
 	LastUsedAt              time.Time `gorm:"column:last_used_at"`
 }
 
+// recommendInventoryItemはrecommendationのサービス層で使用する定義
+// recommendation service がプロンプト構築に使う。
+type RecommendationInventoryItem struct {
+	Name      string
+	Quantity  float64
+	Unit      string
+	ExpiresAt *time.Time
+}
+
 func NewInventoryRepository(db *gorm.DB) *InventoryRepository {
 	return &InventoryRepository{db: db}
 }
@@ -132,6 +141,8 @@ func (r *InventoryRepository) FindByIDAndUserID(id, userID uint64) (*model.Inven
 	}
 	return &item, nil
 }
+
+
 
 // CategoryExists は category_id が categories テーブルに存在するか確認する。
 func (r *InventoryRepository) CategoryExists(categoryID int) (bool, error) {
@@ -297,6 +308,31 @@ func (r *InventoryRepository) GetSummary(userID uint64, expiringWithinDays int) 
 	}
 
 	return &row, nil
+}
+
+// FindActiveByUser は論理削除されていない在庫を全件返す。
+// preferExpiring が true の場合、expires_at が近い順（NULL は末尾）に並べる。
+func (r *InventoryRepository) FindActiveByUser(userID uint64, preferExpiring bool) ([]RecommendationInventoryItem, error) {
+	var items []model.InventoryItem
+
+	q := r.db.Where("user_id = ?", userID)
+	if preferExpiring {
+		q = q.Order("expires_at IS NULL ASC, expires_at ASC")
+	}
+	if err := q.Find(&items).Error; err != nil {
+		return nil, fmt.Errorf("inventory FindActiveByUser userID=%d: %w", userID, err)
+	}
+
+	result := make([]RecommendationInventoryItem, 0, len(items))
+	for _, item := range items {
+		result = append(result, RecommendationInventoryItem{
+			Name:      item.Name,
+			Quantity:  item.Quantity,
+			Unit:      item.Unit,
+			ExpiresAt: item.ExpiresAt,
+		})
+	}
+	return result, nil
 }
 
 // Restore は論理削除済みの在庫を復元する（deleted_at を NULL に戻す）。

@@ -1,17 +1,17 @@
 package handler
 
 import (
+	"net/http"
+
 	"github.com/Takapon2512/recipe-recommend/backend/internal/config"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/middleware"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/repository"
 	"github.com/Takapon2512/recipe-recommend/backend/internal/service"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-
-	"net/http"
 )
 
-func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
+func NewRouter(cfg *config.Config, db *gorm.DB, recService service.RecommendationService) http.Handler {
 	if !cfg.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -45,6 +45,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 		inventoryService := service.NewInventoryService(inventoryRepo)
 		inventoryHandler := NewInventoryHandler(inventoryService, userService)
 
+		recHandler := NewRecommendationHandler(recService, userService)
+
 		authorized.GET("/me", meHandler.Get)
 		authorized.PATCH("/me", meHandler.Patch)
 		authorized.DELETE("/me", meHandler.Delete)
@@ -73,8 +75,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB) http.Handler {
 		authorized.PATCH("/meal-plans/:id", stub)
 		authorized.DELETE("/meal-plans/:id", stub)
 
-		authorized.POST("/recommendations", stub)
-		authorized.GET("/recommendations/:job_id", stub)
+		authorized.POST("/recommendations", recHandler.Create)
+		authorized.GET("/recommendations/:job_id", recHandler.GetJob)
 	}
 
 	return r
