@@ -197,31 +197,30 @@ func buildUserPrompt(req *RecommendRequest) string {
 	var sb strings.Builder
 
 	// --- 在庫リスト ---
-	sb.WriteString("## 現在の在庫\n")
+	fmt.Fprint(&sb, "## 現在の在庫\n")
 	if len(req.InventoryItems) == 0 {
-		sb.WriteString("（在庫なし）\n")
+		fmt.Fprint(&sb, "（在庫なし）\n")
 	} else {
 		for _, item := range req.InventoryItems {
-			line := fmt.Sprintf("- %s: %.2f %s", item.Name, item.Quantity, item.Unit)
 			if item.ExpiresAt != nil {
 				remaining := daysUntil(*item.ExpiresAt)
 				switch {
 				case remaining < 0:
-					line += fmt.Sprintf("（期限切れ %d日前）", -remaining)
+					fmt.Fprintf(&sb, "（期限切れ %d日前）", -remaining)
 				case remaining == 0:
-					line += "（本日期限）"
+					fmt.Fprint(&sb, "（本日期限）")
 				default:
-					line += fmt.Sprintf("（期限まで %d日）", remaining)
+					fmt.Fprintf(&sb, "（期限まで %d日）", remaining)
 				}
 			}
-			sb.WriteString(line + "\n")
+			fmt.Fprint(&sb, "\n")
 		}
 	}
 
 	// --- フィルタ条件 ---
-	sb.WriteString("\n## 条件\n")
+	fmt.Fprint(&sb, "\n## 条件\n")
 	if req.Filters.MaxCookingTimeMin != nil {
-		sb.WriteString(fmt.Sprintf("- 調理時間: %d分以内\n", *req.Filters.MaxCookingTimeMin))
+		fmt.Fprintf(&sb, "- 調理時間: %d分以内\n", *req.Filters.MaxCookingTimeMin)
 	}
 
 	if req.Filters.Genre != nil {
@@ -232,15 +231,15 @@ func buildUserPrompt(req *RecommendRequest) string {
 			"other":    "その他",
 		}
 		if label, ok := genreLabel[*req.Filters.Genre]; ok {
-			sb.WriteString(fmt.Sprintf("- ジャンル: %s\n", label))
+			fmt.Fprintf(&sb, "- ジャンル: %s\n", label)
 		}
 	}
 	if req.Filters.PreferExpiring {
-		sb.WriteString("- 期限が近い食材を優先して使うこと\n")
+		fmt.Fprint(&sb, "- 期限が近い食材を優先して使うこと\n")
 	}
 
 	// --- 件数 ---
-	sb.WriteString(fmt.Sprintf("\n## 提案件数\n%d件\n", req.Count))
+	fmt.Fprintf(&sb, "\n## 提案件数\n%d件\n", req.Count)
 
 	return sb.String()
 }
